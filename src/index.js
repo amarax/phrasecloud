@@ -19,7 +19,7 @@ function onWorkerMessage(e) {
             break;
         case 'ngrams':
             let ngrams = msg.content.ngrams;
-            let ngramList = Object.entries(ngrams).filter(([k,v])=>v.length>=5).map(([k,v])=>({ngram:k, responses:v})).sort((a,b)=>b.responses.length-a.responses.length);
+            let ngramList = Object.entries(ngrams).map(([k,v])=>({ngram:k, responses:v.map(r=>r.response)}));
             
             function draw(words) {
                 // Clear the svg
@@ -44,7 +44,7 @@ function onWorkerMessage(e) {
                     // On hover, show the responses
                     .on('mouseover', function(d) {
                         // Get responses for this ngram
-                        let responses = ngrams[d.target.innerHTML]?.map(r=>`<li>${r}</li>`).join('');
+                        let responses = ngrams[d.target.innerHTML]?.map(r=>`<li>${r.response}</li>`).join('');
                         d3.select('#responses').html(`<ul>${responses}</ul>`);
                         // Remove the hidden class 
                         // and position the top and left of the responses box to the position of the hovered text

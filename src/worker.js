@@ -9,61 +9,63 @@ const as = nlp.as;
 
 
 
+function slice(tokenCollection, start, length) {
+    let tokens = [];
+    for(let i = start; (i < start + length) && (i < tokenCollection.length()); i++) {
+        tokens.push(tokenCollection.itemAt(i));
+    }
+    return tokens;
+}
+
+
 self.onmessage = (e) => {
-    const responses = e.data.responses.map(r=>nlp.readDoc(r).sentences());
-    
+    const responses = e.data.responses.map(r=>nlp.readDoc(r));
 
     self.postMessage({type:'update', content:{responses:responses.length}});
 
-    let tokenizedResponses = responses.map(sentences => {
-        
-        // Remove punctuation and stop words
-        let tokens = [];
-        
-        sentences.each(sentence=>{
-            tokens.push( sentence.tokens().filter( token => {
-                return token.out(its.type) === 'word' && !token.out(its.stopWordFlag);
-            }) );
-        });
-
-        return tokens;
-    });
-
-    // Identify common ngrams, starting from token length 5 down to 1
+    // For each response, extract tokens for each ngram
     let ngrams = {};
-    for(let i=5; i>0; i--) {
-        tokenizedResponses.forEach((tokens, responseIndex)=>{
-            tokens.forEach((t,sentenceIndex)=>{
-                // Get all ngrams of length i
-                for(let j=0; j<t.length()-i; j++) {
-                    let ngram = t.out(its.normal).slice(j,j+i);
-                    let key = ngram.join(' ');
 
-                    // If the ngram is a subset of another existing ngram, check if this instance is indeed the superset ngram
-                    // If so, skip this ngram
-                    // let superset = Object.keys(ngrams).find(k=>k.includes(ngram));
-                    // if(superset) {
-                    // // if(superset && normalizedSentence.join(' ').includes(superset)) {
-                    //     continue;
-                    // }
+    function key(ngram) {
+        return ngram.map(t=>t.out(its.normal)).join(' ');
+    }
 
-                    if(ngrams[ngram]) {
-                        ngrams[ngram].push( response );
-                    } else {
-                        ngrams[ngram] = [ response ];
+    for(let ngramLength = 5; ngramLength >= 1; ngramLength--) {
+        responses.forEach(response => {
+            response.sentences().each( sentence => {
+                let s = sentence.tokens().filter(t=>t.out(its.pos) !== 'PUNCT' && !t.out(its.stopWordFlag));
+
+                for(let i = 0; i < s.length() - ngramLength; i++) {
+                    let ngram = slice(s, i, ngramLength);
+                    let k = key(ngram);
+
+                    if(!ngrams[k]) {
+                        ngrams[k] = [];
                     }
+                    ngrams[k].push(ngram);
                 }
-            });
+            })
         });
 
-        // Remove all ngrams that only occur once
+        // Remove ngrams that only appear once
         Object.entries(ngrams).forEach(([k,v])=>{
-            if(v===1) {
+            if(v.length < 5) {
                 delete ngrams[k];
             }
         });
-
-        // Send ngrams to the main thread
-        self.postMessage({type:'ngrams', content:{ngrams}});
     }
+
+    // For each ngram, get the original text that's bounded by the first and last token
+    Object.entries(ngrams).forEach(([k,v])=>{
+        ngrams[k] = v.map(ngram=>{
+            let first = ngram[0];
+            let last = ngram[ngram.length-1];
+            return {
+                phrase: first.parentDocument().tokens().out().slice(first.index(), last.index()+1),
+                response: first.parentDocument().out()
+            };
+        });
+    });
+
+    self.postMessage({type:'ngrams', content:{ngrams:ngrams}});
 };
