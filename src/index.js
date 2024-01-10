@@ -12,14 +12,26 @@ function updateStatus(message) {
 
 function onWorkerMessage(e) {
     let msg = e.data;
-    console.log(msg);
     switch(msg.type) {
         case 'update':
             updateStatus(`Found ${Object.entries(msg.content).map(([k,v])=>`${k}: ${v}`).join(', ')}`);
             break;
         case 'ngrams':
             let ngrams = msg.content.ngrams;
-            let ngramList = Object.entries(ngrams).map(([k,v])=>({ngram:k, responses:v.map(r=>r.response)}));
+
+            let matchTags = ['<span class="match">', '</span>']
+            function formatResponse(r) {
+                return r.response.slice(0, r.match[0]) + matchTags[0] + r.response.slice(r.match[0], r.match[1]) + matchTags[1] + r.response.slice(r.match[1]);
+            }
+
+
+            // Get the most common phrases and their responses
+            let ngramList = Object.entries(ngrams).map(([k,v])=>({
+                ngram:k, 
+                phrase:v.commonPhrase, 
+                responses:v.responses.map(r=>r.response)
+            }));
+            console.log(ngramList.sort((a,b)=>b.responses.length - a.responses.length));
             
             function draw(words) {
                 // Clear the svg
@@ -33,6 +45,7 @@ function onWorkerMessage(e) {
                   .selectAll("text")
                     .data(words)
                   .enter().append("text")
+                    .attr("data-key", d=>d.key)
                     .style("font-size", function(d) { return d.size + "px"; })
                     .style("font-family", "Impact")
                     .attr("text-anchor", "middle")
@@ -44,13 +57,13 @@ function onWorkerMessage(e) {
                     // On hover, show the responses
                     .on('mouseover', function(d) {
                         // Get responses for this ngram
-                        let responses = ngrams[d.target.innerHTML]?.map(r=>`<li>${r.response}</li>`).join('');
-                        d3.select('#responses').html(`<ul>${responses}</ul>`);
+                        let responses = ngrams[d.target.dataset.key]?.responses.map(r=>`<li>${formatResponse(r)}</li>`);
+                        d3.select('#responses').html(`Count: ${responses?.length}<br /><ul>${responses?.join('')}</ul>`);
                         // Remove the hidden class 
                         // and position the top and left of the responses box to the position of the hovered text
 
                         let rect = d3.select(this).node().getBoundingClientRect();
-                        let topleft = [rect.x + rect.width, rect.y]
+                        let topleft = [rect.x, rect.y+rect.height]
                         d3.select('#responses').classed('hidden', false)
                             .style('top', `${topleft[1]}px`)
                             .style('left', `${topleft[0]}px`);
@@ -61,12 +74,18 @@ function onWorkerMessage(e) {
                     });
             }
 
+            // Get the ngram with most responses
+            let maxResponses = Math.max(...ngramList.map(n=>n.responses.length));
+
+            let cloudSize = 720;
+            let maxFontSize = cloudSize / 8;
+
             let layout = cloud()
-                .size([512, 512])
+                .size([cloudSize*16/9, cloudSize])
                 .words(ngramList.map(function(d) {
-                    return {text: d.ngram, size: d.responses.length};
+                    return {text: d.phrase, key:d.ngram, size: d.responses.length * (maxFontSize/maxResponses)};
                 }))
-                .padding(5)
+                .padding(4)
                 .font("Impact")
                 .rotate(()=>0)
                 .fontSize(function(d) { return d.size; })
@@ -102,8 +121,8 @@ if (module.hot) {
 
 const reader = new FileReader();
 reader.onload = (e) => {
-    let csv = d3.csvParse( e.target.result );
-    let responses = csv.map(row=>row['Responses']);
+    let csv = d3.csvParseRows( e.target.result );
+    let responses = csv.map(row=>row[0]);
 
     // Send the text to a service worker to process
     worker.postMessage({ responses });
