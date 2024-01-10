@@ -22,5 +22,10 @@
     "webpack-cli": "^5.1.4",
     "webpack-dev-server": "^4.15.1",
     "webpack-merge": "^5.10.0"
+  },
+  "dependencies": {
+    "d3": "^7.8.5",
+    "wink-eng-lite-web-model": "^1.5.2",
+    "wink-nlp": "^1.14.3"
   }
 }
