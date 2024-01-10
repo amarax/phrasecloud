@@ -9,13 +9,4 @@ module.exports = merge(common, {
     hot: true,
     watchFiles: ['src/**/*.html'],
   },
-  module: {
-    rules: [
-      {
-        test: /\.css$/,
-        use: ['style-loader', 'css-loader'],
-      },
-    ],
-  },
-  
 });

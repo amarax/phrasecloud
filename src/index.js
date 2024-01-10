@@ -100,6 +100,7 @@ function onWorkerMessage(e) {
 
 let worker = new Worker(new URL('./worker.js', import.meta.url));
 worker.onmessage = onWorkerMessage;
+console.log(`Worker loaded`);
 if (module.hot) {
     // Force the worker to reload regardless
     module.hot.addStatusHandler((status) => {
