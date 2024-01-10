@@ -74,7 +74,7 @@ function onWorkerMessage(e) {
             let cloudSize = 720;
             let maxFontSize = cloudSize / 6;
 
-            ngramList = ngramList.slice(0,50);
+            ngramList = ngramList.slice(0,100);
 
             let layout = cloud()
                 .size([cloudSize*16/9, cloudSize])

@@ -32,7 +32,7 @@ self.onmessage = (e) => {
         return ngram.map(t=>t.out(its.lemma)).join(' ');
     }
 
-    for(let ngramLength = 6; ngramLength >= 2; ngramLength--) {
+    for(let ngramLength = 6; ngramLength >= 1; ngramLength--) {
         responses.forEach((response, responseIndex) => {
             response.sentences().each( sentence => {
                 let s = sentence.tokens().filter(
