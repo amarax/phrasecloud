@@ -34,11 +34,10 @@ self.onmessage = (e) => {
     for(let i=5; i>0; i--) {
         tokenizedResponses.forEach((tokens, responseIndex)=>{
             tokens.forEach((t,sentenceIndex)=>{
-                let normalizedSentence = t.out(its.normal);
-
                 // Get all ngrams of length i
-                for(let j=0; j<normalizedSentence.length-i; j++) {
-                    let ngram = normalizedSentence.slice(j,j+i).join(' ');
+                for(let j=0; j<t.length()-i; j++) {
+                    let ngram = t.out(its.normal).slice(j,j+i);
+                    let key = ngram.join(' ');
 
                     // If the ngram is a subset of another existing ngram, check if this instance is indeed the superset ngram
                     // If so, skip this ngram
@@ -49,9 +48,9 @@ self.onmessage = (e) => {
                     // }
 
                     if(ngrams[ngram]) {
-                        ngrams[ngram].push( e.data.responses[responseIndex] );
+                        ngrams[ngram].push( response );
                     } else {
-                        ngrams[ngram] = [ e.data.responses[responseIndex] ];
+                        ngrams[ngram] = [ response ];
                     }
                 }
             });

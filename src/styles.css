@@ -1,0 +1,16 @@
+.hidden {
+    display: none;
+}
+
+#responses {
+    width: 400px;
+    position: absolute;
+    background-color: white;
+    z-index: 100;
+
+    pointer-events: none;
+}
+
+#responses text {
+    cursor: pointer;
+}

@@ -1,6 +1,8 @@
 import * as d3 from 'd3';
 import cloud from 'd3-cloud';
 
+import './styles.css';
+
 const app = document.getElementById('app');
 
 
