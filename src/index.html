@@ -4,11 +4,32 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Phrase Cloud</title>
+
+    <style>
+        .hidden {
+            display: none;
+        }
+
+        #responses {
+            width: 200px;
+            position: absolute;
+            background-color: white;
+            z-index: 100;
+
+            pointer-events: none;
+        }
+
+        #responses text {
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
     <div id="app"></div>
     <input type="file" id="textfile" accept=".txt, .csv" />
     <input type="button" id="generate" value="Generate" />
-    <svg id="cloud" width="960" height="600"></svg>
+    <svg id="cloud" width="512" height="512"></svg>
+
+    <div id="responses" class="hidden" style="top: 0; left: 0;"></div>
 </body>
 </html>
