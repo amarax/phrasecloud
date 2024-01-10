@@ -33,7 +33,7 @@
 }
 
 #responses li span.match {
-    background-color: #e0e0e0;
+    background-color: #ffcc00;
 }
 
 #cloud text {
@@ -41,5 +41,5 @@
 }
 
 #cloud text:hover {
-    fill: #ff0000;
+    fill: #ffcc00;
 }

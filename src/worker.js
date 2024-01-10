@@ -32,7 +32,7 @@ self.onmessage = (e) => {
         return ngram.map(t=>t.out(its.lemma)).join(' ');
     }
 
-    for(let ngramLength = 5; ngramLength >= 2; ngramLength--) {
+    for(let ngramLength = 6; ngramLength >= 2; ngramLength--) {
         responses.forEach((response, responseIndex) => {
             response.sentences().each( sentence => {
                 let s = sentence.tokens().filter(
@@ -41,7 +41,7 @@ self.onmessage = (e) => {
                     && !usedIndices[responseIndex]?.has(t.index())
                 );
 
-                for(let i = 0; i < s.length() - ngramLength; i++) {
+                for(let i = 0; i <= s.length() - ngramLength; i++) {
                     let ngram = slice(s, i, ngramLength);
                     let k = key(ngram);
 
@@ -55,7 +55,7 @@ self.onmessage = (e) => {
 
         // Remove ngrams that only appear once
         Object.entries(ngrams).forEach(([k,v])=>{
-            if(v.length < 5) {
+            if(v.length < 4) {
                 delete ngrams[k];
             }
         });
@@ -70,41 +70,37 @@ self.onmessage = (e) => {
                 ngram.forEach(t=>usedIndices[responseIndex].add(t.index()));
             });
         });
-
     }
 
     // For each ngram, get the original text that's bounded by the first and last token
     Object.entries(ngrams).forEach(([k,v])=>{
         ngrams[k] = v.map(entry=>{
-            let first = entry.ngram[0];
-            let last = entry.ngram[entry.ngram.length - 1];
+            // Duplicate the document so the markup doesn't affect the original
+            let response = entry.ngram[0].parentDocument().out();
+            let doc = nlp.readDoc(response);
+            let tokens = doc.tokens();
 
-            // Extract the shortest substring from the parent document 
-            // that's bounded by the first and last token using regex
-            let firstText = first.out();
-            let lastText = last.out();
-            // Replace any regex special characters
-            const regexSpecialChars = /[-\/\\^$*+?.()|[\]{}]/g;
-            firstText = firstText.replace(regexSpecialChars, '\\$&');
-            lastText = lastText.replace(regexSpecialChars, '\\$&');
+            let first = tokens.itemAt( entry.ngram[0].index() );
+            let last = tokens.itemAt( entry.ngram[entry.ngram.length - 1].index() );
 
-            let re;
-            if (entry.ngram.length === 1) {
-                re = new RegExp(`${firstText}`);
+            let tags = ['<span class="match">', '</span>'];
+            if(entry.ngram.length == 1) {
+                first.markup(tags[0],tags[1]);
             } else {
-                re = new RegExp(`${firstText}.*?${lastText}`);
+                first.markup(tags[0],'');
+                last.markup('',tags[1]);
             }
 
-            let match = re.exec(first.parentDocument().out());
-            if (match) {
-                return {
-                    phrase: match[0],
-                    response: first.parentDocument().out(),
-                    match: [match.index, match.index + match[0].length]
-                };
-            } else {
-                console.error(`No phrase match for ${k}`, first.parentDocument().out());
-            }
+            let markup = first.parentDocument().out(its.markedUpText);
+            
+            // Extract the phrase from the text between the markup
+            let phrase = markup.slice(markup.indexOf(tags[0]) + tags[0].length, markup.indexOf(tags[1]));
+
+            return {
+                response,
+                phrase,
+                markup
+            };
         });
 
         // Find the most common phrase

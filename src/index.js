@@ -19,19 +19,13 @@ function onWorkerMessage(e) {
         case 'ngrams':
             let ngrams = msg.content.ngrams;
 
-            let matchTags = ['<span class="match">', '</span>']
-            function formatResponse(r) {
-                return r.response.slice(0, r.match[0]) + matchTags[0] + r.response.slice(r.match[0], r.match[1]) + matchTags[1] + r.response.slice(r.match[1]);
-            }
-
-
             // Get the most common phrases and their responses
             let ngramList = Object.entries(ngrams).map(([k,v])=>({
                 ngram:k, 
                 phrase:v.commonPhrase, 
                 responses:v.responses.map(r=>r.response)
             }));
-            console.log(ngramList.sort((a,b)=>b.responses.length - a.responses.length));
+            ngramList = ngramList.sort((a,b)=>b.responses.length - a.responses.length);
             
             function draw(words) {
                 // Clear the svg
@@ -57,7 +51,7 @@ function onWorkerMessage(e) {
                     // On hover, show the responses
                     .on('mouseover', function(d) {
                         // Get responses for this ngram
-                        let responses = ngrams[d.target.dataset.key]?.responses.map(r=>`<li>${formatResponse(r)}</li>`);
+                        let responses = ngrams[d.target.dataset.key]?.responses.map(r=>`<li>${r.markup}</li>`);
                         d3.select('#responses').html(`Count: ${responses?.length}<br /><ul>${responses?.join('')}</ul>`);
                         // Remove the hidden class 
                         // and position the top and left of the responses box to the position of the hovered text
@@ -78,14 +72,17 @@ function onWorkerMessage(e) {
             let maxResponses = Math.max(...ngramList.map(n=>n.responses.length));
 
             let cloudSize = 720;
-            let maxFontSize = cloudSize / 8;
+            let maxFontSize = cloudSize / 6;
+
+            ngramList = ngramList.slice(0,50);
 
             let layout = cloud()
                 .size([cloudSize*16/9, cloudSize])
                 .words(ngramList.map(function(d) {
-                    return {text: d.phrase, key:d.ngram, size: d.responses.length * (maxFontSize/maxResponses)};
+                    return {text: d.phrase, key:d.ngram, size: d.responses.length * maxFontSize/(maxResponses)};
                 }))
                 .padding(4)
+                
                 .font("Impact")
                 .rotate(()=>0)
                 .fontSize(function(d) { return d.size; })
