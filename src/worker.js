@@ -39,9 +39,9 @@ function slice(tokenCollection, start, length) {
 }
 
 
-self.onmessage = (e) => {
+function generateNgrams(data) {
     // Remove repeated responses
-    const responses = [...new Set(e.data.responses)].map(r=>nlp.readDoc(r));
+    const responses = [...new Set(data)].map(r=>nlp.readDoc(r));
 
     self.postMessage({type:'update', content:{responses:responses.length}});
 
@@ -53,7 +53,7 @@ self.onmessage = (e) => {
         return ngram.map(t=>t.out(its.lemma)).join(' ');
     }
 
-    for(let ngramLength = 6; ngramLength >= 1; ngramLength--) {
+    for(let ngramLength = 6; ngramLength >= minNgramLength; ngramLength--) {
         responses.forEach((response, responseIndex) => {
             response.sentences().each( sentence => {
                 let s = sentence.tokens().filter(
@@ -141,4 +141,20 @@ self.onmessage = (e) => {
     });
 
     self.postMessage({type:'ngrams', content:{ngrams:ngrams}});
+}
+
+
+var data = null;
+var minNgramLength = 1;
+
+self.onmessage = (e) => {
+    if(e.data.responses) {
+        data = e.data.responses;
+    } else if(e.data.minNgramLength) {
+        minNgramLength = e.data.minNgramLength;
+    }
+
+    if(data) {
+        generateNgrams(data);
+    }
 };

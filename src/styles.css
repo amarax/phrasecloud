@@ -38,6 +38,7 @@
 
 #cloud text {
     cursor: pointer;
+    transition: font-size 0.3s ease, transform 0.3s ease;
 }
 
 #cloud text:hover {

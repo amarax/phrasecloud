@@ -36,6 +36,7 @@ function onWorkerMessage(e) {
             updateStatus(`Found ${Object.entries(msg.content).map(([k,v])=>`${k}: ${v}`).join(', ')}`);
             break;
         case 'ngrams':
+            console.log("Drawing cloud...");
             let ngrams = msg.content.ngrams;
 
             // Get the most common phrases and their responses
@@ -82,40 +83,50 @@ function layout(ngramList) {
 
 function draw(words, layout) {
     // Clear the svg
-    d3.select("#cloud").select('svg').remove();
-
-    d3.select("#cloud").append("svg")
-        .attr("width", layout.size()[0])
-        .attr("height", layout.size()[1])
-      .append("g")
+    d3.select("#cloud")
+      .select("g")
         .attr("transform", "translate(" + layout.size()[0] / 2 + "," + layout.size()[1] / 2 + ")")
       .selectAll("text")
-        .data(words)
-      .enter().append("text")
-        .attr("data-key", d=>d.key)
-        .style("font-size", function(d) { return d.size + "px"; })
-        .style("font-family", "Impact")
-        .attr("text-anchor", "middle")
-        .attr("transform", function(d) {
-            return "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")";
-        })
-        .text(function(d) { return d.text; })
-        .on('mouseover', function(e, d) {
-            // Get responses for this ngram
-            let responses = d.responses.map(r=>`<li>${r.markup}</li>`);
-
-            let rect = d3.select(this).node().getBoundingClientRect();
-            let topleft = [rect.x, rect.y+rect.height]
-            d3.select('#responses')
-                .html(`Count: ${responses?.length}<br /><ul>${responses?.join('')}</ul>`)
-                .classed('hidden', false)
-                .style('top', `${topleft[1]}px`)
-                .style('left', `${topleft[0]}px`);
-
-        })
-        .on('mouseout', function(d) {
-            d3.select('#responses').classed('hidden', true);
-        });
+        .data(words, d=>d.key)
+        .join(
+            function(enter) {
+                enter.append("text")
+                    .attr("data-key", d=>d.key)
+                    .style("font-size", function(d) { return d.size + "px"; })
+                    .style("font-family", "Impact")
+                    .attr("text-anchor", "middle")
+                    .attr("transform", function(d) {
+                        return "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")";
+                    })
+                    .text(function(d) { return d.text; })
+                    .on('mouseover', function(e, d) {
+                        // Get responses for this ngram
+                        let responses = d.responses.map(r=>`<li>${r.markup}</li>`);
+            
+                        let rect = d3.select(this).node().getBoundingClientRect();
+                        let topleft = [rect.x, rect.y+rect.height]
+                        d3.select('#responses')
+                            .html(`Count: ${responses?.length}<br /><ul>${responses?.join('')}</ul>`)
+                            .classed('hidden', false)
+                            .style('top', `${topleft[1]}px`)
+                            .style('left', `${topleft[0]}px`);
+            
+                    })
+                    .on('mouseout', function(d) {
+                        d3.select('#responses').classed('hidden', true);
+                    })
+            },
+            function(update) {
+                update.text(d=>d.text)
+                    .attr("transform", function(d) {
+                        return "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")";
+                    })
+                    .style("font-size", function(d) { return d.size + "px"; })
+            },
+            function(exit) {
+                exit.remove();
+            }
+        )
 }
 
 
@@ -168,10 +179,7 @@ fileInput.onchange = (e) => {
 }
 
 document.getElementById('generate').onclick = (e) => {
-    if(file) {
-        reader.readAsText(file);
-
-    }
+    worker.postMessage({ generate: true });
 }
 
 function isText(e) {
@@ -202,6 +210,20 @@ let drop = dropZone(document.getRootNode())
             worker.postMessage({ responses });
         } else if(isTextFile(e)) {
             let file = e.dataTransfer.items[0]?.getAsFile() || e.dataTransfer.files[0];
+            
             reader.readAsText(file);
         }
+        console.log("Processing text...");
     });
+
+
+const ngramLengthSlider = document.getElementById('ngramLength');
+const ngramLengthDisplay = document.getElementById('ngramLengthDisplay');
+
+function updateNgramLength(e) {
+    ngramLengthDisplay.textContent = e.target.value;
+    worker.postMessage({ minNgramLength: e.target.value });
+}
+
+ngramLengthSlider.oninput = updateNgramLength;
+updateNgramLength({target:ngramLengthSlider});

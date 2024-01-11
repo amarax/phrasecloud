@@ -7,9 +7,15 @@
 </head>
 <body>
     <div id="status">Nothing loaded</div>
-    <input type="file" id="textfile" accept=".txt, .csv" />
-    <input type="button" id="generate" value="Generate" />
-    <svg id="cloud" width="95vw" height="90vh"></svg>
+    <div class="controls">
+        <input type="file" id="textfile" accept=".txt, .csv" />
+        <input type="button" id="generate" value="Re-generate" />
+
+        <label for="ngramLength">Minimum ngram length:</label>
+        <input type="range" id="ngramLength" name="ngramLength" min="1" max="6" value="1">
+        <span id="ngramLengthDisplay">1</span>
+    </div>
+    <svg id="cloud" width="95vw" height="90vh"><g></g></svg>
 
     <div id="responses" class="hidden" style="top: 0; left: 0;"></div>
 
