@@ -3,11 +3,11 @@ import cloud from 'd3-cloud';
 
 import './styles.css';
 
-const app = document.getElementById('app');
+const status = document.getElementById('status');
 
 
 function updateStatus(message) {
-    app.innerHTML = message;
+    status.innerHTML = message;
 }
 
 function onWorkerMessage(e) {
@@ -26,75 +26,85 @@ function onWorkerMessage(e) {
                 responses:v.responses.map(r=>r.response)
             }));
             ngramList = ngramList.sort((a,b)=>b.responses.length - a.responses.length);
-            
-            function draw(words) {
-                // Clear the svg
-                d3.select("#cloud").select('svg').remove();
-
-                d3.select("#cloud").append("svg")
-                    .attr("width", layout.size()[0])
-                    .attr("height", layout.size()[1])
-                  .append("g")
-                    .attr("transform", "translate(" + layout.size()[0] / 2 + "," + layout.size()[1] / 2 + ")")
-                  .selectAll("text")
-                    .data(words)
-                  .enter().append("text")
-                    .attr("data-key", d=>d.key)
-                    .style("font-size", function(d) { return d.size + "px"; })
-                    .style("font-family", "Impact")
-                    .attr("text-anchor", "middle")
-                    .attr("transform", function(d) {
-                        return "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")";
-                    })
-                    .text(function(d) { return d.text; })
-
-                    // On hover, show the responses
-                    .on('mouseover', function(d) {
-                        // Get responses for this ngram
-                        let responses = ngrams[d.target.dataset.key]?.responses.map(r=>`<li>${r.markup}</li>`);
-                        d3.select('#responses').html(`Count: ${responses?.length}<br /><ul>${responses?.join('')}</ul>`);
-                        // Remove the hidden class 
-                        // and position the top and left of the responses box to the position of the hovered text
-
-                        let rect = d3.select(this).node().getBoundingClientRect();
-                        let topleft = [rect.x, rect.y+rect.height]
-                        d3.select('#responses').classed('hidden', false)
-                            .style('top', `${topleft[1]}px`)
-                            .style('left', `${topleft[0]}px`);
-   
-                    })
-                    .on('mouseout', function(d) {
-                        d3.select('#responses').classed('hidden', true);
-                    });
-            }
-
-            // Get the ngram with most responses
-            let maxResponses = Math.max(...ngramList.map(n=>n.responses.length));
-
-            let cloudSize = 720;
-            let maxFontSize = cloudSize / 6;
 
             ngramList = ngramList.slice(0,100);
 
-            let layout = cloud()
-                .size([cloudSize*16/9, cloudSize])
-                .words(ngramList.map(function(d) {
-                    return {text: d.phrase, key:d.ngram, size: d.responses.length * maxFontSize/(maxResponses)};
-                }))
-                .padding(4)
-                
-                .font("Impact")
-                .rotate(()=>0)
-                .fontSize(function(d) { return d.size; })
-                .on("end", draw);
-        
-            layout.start();
+            layout(ngramList);
 
             break;
         default:
             console.log('Unknown message type', msg.type);
     }
     
+}
+
+
+function layout(ngramList) {
+    // Get the ngram with most responses
+    let maxResponses = Math.max(...ngramList.map(n=>n.responses.length));
+
+    let cloudSize = 720;
+    let maxFontSize = cloudSize / 6;
+
+    let layout = cloud()
+        .size([cloudSize*16/9, cloudSize])
+        .words(ngramList.map(function(d) {
+            return {text: d.phrase, key:d.ngram, size: d.responses.length * maxFontSize/(maxResponses), responses:d.responses};
+        }))
+        .padding(4)
+        
+        .font("Impact")
+        .rotate(()=>0)
+        .fontSize(function(d) { return d.size; })
+        .on("end", words=>(draw(words, layout)));
+
+    layout.start();
+}
+
+function draw(words, layout) {
+    // Clear the svg
+    d3.select("#cloud").select('svg').remove();
+
+    d3.select("#cloud").append("svg")
+        .attr("width", layout.size()[0])
+        .attr("height", layout.size()[1])
+      .append("g")
+        .attr("transform", "translate(" + layout.size()[0] / 2 + "," + layout.size()[1] / 2 + ")")
+      .selectAll("text")
+        .data(words)
+      .enter().append("text")
+        .attr("data-key", d=>d.key)
+        .style("font-size", function(d) { return d.size + "px"; })
+        .style("font-family", "Impact")
+        .attr("text-anchor", "middle")
+        .attr("transform", function(d) {
+            return "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")";
+        })
+        .text(function(d) { return d.text; })
+        .on('mouseover', function(e, d) {
+            console.log(d);
+
+            // Get responses for this ngram
+            let responses = d.responses.map(r=>`<li>${r.markup}</li>`);
+
+            let rect = d3.select(this).node().getBoundingClientRect();
+            let topleft = [rect.x, rect.y+rect.height]
+            d3.select('#responses')
+                .html(`Count: ${responses?.length}<br /><ul>${responses?.join('')}</ul>`)
+                .classed('hidden', false)
+                .style('top', `${topleft[1]}px`)
+                .style('left', `${topleft[0]}px`);
+
+        })
+        .on('mouseout', function(d) {
+            d3.select('#responses').classed('hidden', true);
+        });
+}
+
+
+// When the viewport resizes, resize the cloud
+window.onresize = function(event) {
+    let cloud = document.getElementById('cloud');
 }
 
 
@@ -134,7 +144,7 @@ fileInput.onchange = (e) => {
     if(file !== e.target.files[0]) {
         file = e.target.files[0];
         // Change app content to show loading message
-        app.innerHTML = 'Loading...';
+        status.innerHTML = 'Loading...';
 
         reader.readAsText(file);
     }
@@ -166,7 +176,7 @@ function isTextFile(e) {
 }
 
 import dropZone from './dropZone.js';
-let drop = dropZone(document.getElementById('dropZone'))
+let drop = dropZone(document.getRootNode())
     .isallowed(e=>isText(e) || isTextFile(e))
     .ondrop(e=>{
         if(isText(e)) {

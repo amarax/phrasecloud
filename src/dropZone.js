@@ -25,8 +25,8 @@
  * @returns {dropZone}
  */
 function dropZone(element) {
-    // Get the visual elements, which is identified as the .label child
-    const label = element.querySelector('.label');
+    // Get the visual elements, which is identified as the .dropZoneBox child
+    const label = element.querySelector('.dropZoneBox');
 
     function hide() {
         label.classList.add('hidden');
@@ -58,6 +58,9 @@ function dropZone(element) {
             ondrop(e);
         }
     });
+
+    
+    
 
     hide();
 
