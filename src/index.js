@@ -42,7 +42,7 @@ function onWorkerMessage(e) {
             let ngramList = Object.entries(ngrams).map(([k,v])=>({
                 ngram:k, 
                 phrase:v.commonPhrase, 
-                responses:v.responses.map(r=>r.response)
+                responses:v.responses
             }));
             ngramList = ngramList.sort((a,b)=>b.responses.length - a.responses.length);
 
@@ -101,8 +101,6 @@ function draw(words, layout) {
         })
         .text(function(d) { return d.text; })
         .on('mouseover', function(e, d) {
-            console.log(d);
-
             // Get responses for this ngram
             let responses = d.responses.map(r=>`<li>${r.markup}</li>`);
 
