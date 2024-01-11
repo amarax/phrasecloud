@@ -8,6 +8,27 @@ const its = nlp.its;
 const as = nlp.as;
 
 
+/**
+ * Response object
+ * @typedef {Object} Response
+ * @property {string} response - The response text
+ * @property {string} phrase - The phrase that was matched
+ * @property {string} markup - The response text with the matched phrase marked up
+ */
+
+/**
+ * N-gram object
+ * @typedef {Object} ngram
+ * @property {string} commonPhrase - The most common phrase in the ngram
+ * @property {Response[]} responses - The responses that contain the ngram
+ * 
+ */
+
+/**
+ * N-gram message return object
+ * @typedef {Object.<string, ngram>} ngrams - The ngrams using their its.lemma form as the key
+ */
+
 
 function slice(tokenCollection, start, length) {
     let tokens = [];

@@ -10,6 +10,25 @@ function updateStatus(message) {
     status.innerHTML = message;
 }
 
+/**
+ * @typedef {import('./worker.js').ngrams} ngrams
+ */
+
+/**
+ * Worker Message Event Object
+ * @typedef {Object} WorkerMessageEvent
+ * @property {Object} data - The message data
+ * @property {string} data.type - The type of message
+ * @property {Object} data.content - The message content
+ * @property {string} data.content.responses - The number of responses
+ * @property {ngrams} data.content.ngrams - The ngrams
+ */
+
+/**
+ * Worker message handler
+ * @param {WorkerMessageEvent} e - The message event
+ * @returns {void}
+ */
 function onWorkerMessage(e) {
     let msg = e.data;
     switch(msg.type) {
