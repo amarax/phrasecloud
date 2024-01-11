@@ -24,6 +24,9 @@ function updateStatus(message) {
  * @property {ngrams} data.content.ngrams - The ngrams
  */
 
+
+var ngramList = null;
+var stats = {}
 /**
  * Worker message handler
  * @param {WorkerMessageEvent} e - The message event
@@ -33,21 +36,20 @@ function onWorkerMessage(e) {
     let msg = e.data;
     switch(msg.type) {
         case 'update':
-            updateStatus(`Found ${Object.entries(msg.content).map(([k,v])=>`${k}: ${v}`).join(', ')}`);
+            stats = {...msg.content};
+            updateStatus(`Found ${Object.entries(msg.content).map(([k,v])=>`${k}: ${v}`).join(', ')}, generating...`);
             break;
         case 'ngrams':
-            console.log("Drawing cloud...");
             let ngrams = msg.content.ngrams;
+            updateStatus(`Drawing cloud...`);
 
             // Get the most common phrases and their responses
-            let ngramList = Object.entries(ngrams).map(([k,v])=>({
+            ngramList = Object.entries(ngrams).map(([k,v])=>({
                 ngram:k, 
                 phrase:v.commonPhrase, 
                 responses:v.responses
             }));
             ngramList = ngramList.sort((a,b)=>b.responses.length - a.responses.length);
-
-            ngramList = ngramList.slice(0,100);
 
             layout(ngramList);
 
@@ -58,16 +60,18 @@ function onWorkerMessage(e) {
     
 }
 
-
+var maxPhrases = 100;
 function layout(ngramList) {
+    ngramList = ngramList.slice(0,maxPhrases);
+
     // Get the ngram with most responses
     let maxResponses = Math.max(...ngramList.map(n=>n.responses.length));
 
-    let cloudSize = 720;
-    let maxFontSize = cloudSize / 6;
+    let cloudRect = document.getElementById('cloud').getBoundingClientRect();
+    let maxFontSize = cloudRect.height / 6;
 
     let layout = cloud()
-        .size([cloudSize*16/9, cloudSize])
+        .size([cloudRect.width, cloudRect.height])
         .words(ngramList.map(function(d) {
             return {text: d.phrase, key:d.ngram, size: d.responses.length * maxFontSize/(maxResponses), responses:d.responses};
         }))
@@ -127,12 +131,15 @@ function draw(words, layout) {
                 exit.remove();
             }
         )
+
+    updateStatus(`Done! (Responses: ${Object.entries(stats).map(([k,v])=>`${k}: ${v}`).join(', ')}, Phrases: ${ngramList.length})`);
+
 }
 
 
 // When the viewport resizes, resize the cloud
 window.onresize = function(event) {
-    let cloud = document.getElementById('cloud');
+    layout(ngramList);
 }
 
 

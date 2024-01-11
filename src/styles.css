@@ -97,3 +97,7 @@
     border: 4px black dashed;
     border-radius: 8px;
 }
+
+body {
+    overflow: hidden;
+}
