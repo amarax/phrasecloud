@@ -146,3 +146,35 @@ document.getElementById('generate').onclick = (e) => {
 
     }
 }
+
+function isText(e) {
+    if(e.dataTransfer.types.includes('text/plain') || e.dataTransfer.types.includes('text/csv')) {
+        return true;
+    }
+    return false;
+}
+
+function isTextFile(e) {
+    if(e.dataTransfer.types.includes('Files')) {
+        // Check if it's a text or csv file
+        const file = e.dataTransfer.items[0] || e.dataTransfer.files[0];
+        if(file.type === 'text/plain' || file.type === 'text/csv') {
+            return true;
+        }
+    }
+    return false;
+}
+
+import dropZone from './dropZone.js';
+let drop = dropZone(document.getElementById('dropZone'))
+    .isallowed(e=>isText(e) || isTextFile(e))
+    .ondrop(e=>{
+        if(isText(e)) {
+            let text = e.dataTransfer.getData('text/plain');
+            let responses = text.split('\n').filter(r=>r.length > 0);
+            worker.postMessage({ responses });
+        } else if(isTextFile(e)) {
+            let file = e.dataTransfer.items[0]?.getAsFile() || e.dataTransfer.files[0];
+            reader.readAsText(file);
+        }
+    });

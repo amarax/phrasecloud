@@ -6,7 +6,7 @@
     width: 400px;
     position: absolute;
     background-color: white;
-    z-index: 100;
+    z-index: 10;
 
     max-height: 400px;
     /* Make the text truncate via ellipsis */
@@ -42,4 +42,56 @@
 
 #cloud text:hover {
     fill: #ffcc00;
+}
+
+#dropZone {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+
+}
+
+#dropZone div {
+    pointer-events: none;
+}
+
+#dropZone .label {
+    /* Fill the parent */
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+
+    background: rgba(255, 255, 255, 0.737);
+}
+
+#dropZone .outline {
+    /* Fill the parent */
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+
+    margin: 32px;
+
+    pointer-events: none;
+
+    z-index: 100;
+
+    /* Align the text to the centre of the dropzone */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    font-size: 64px;
+
+    z-index: 100;
+
+
+    border: 4px black dashed;
+    border-radius: 8px;
 }
