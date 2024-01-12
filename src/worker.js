@@ -150,7 +150,8 @@ var minNgramLength = 1;
 self.onmessage = (e) => {
     if(e.data.responses) {
         data = e.data.responses;
-    } else if(e.data.minNgramLength) {
+    }
+    if(e.data.minNgramLength) {
         minNgramLength = e.data.minNgramLength;
     }
 

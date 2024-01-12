@@ -9,12 +9,12 @@ svg#cloud {
 }
 
 #responses {
-    width: 400px;
+    width: min(400px, 50vw);
     position: absolute;
     background-color: white;
     z-index: 10;
 
-    max-height: 400px;
+    max-height: min(400px, 40vh);
     overflow-y: scroll; 
     
 
