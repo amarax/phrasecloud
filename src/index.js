@@ -127,7 +127,6 @@ function draw(words, layout) {
 
                         // Nudge the box to the left if it's too close to the right edge
                         let margin = 32;
-                        console.log(pos[0], responsesWidth, window.innerWidth)
                         if(pos[0] + responsesWidth + margin > window.innerWidth) {
                             pos[0] = window.innerWidth - rect.x - rect.width;
                             posAnchors[0] = 'right';
@@ -175,7 +174,6 @@ function draw(words, layout) {
 
 // When clicking outside the SVG, hide the responses box
 document.addEventListener('click', (e)=>{
-    console.log(e.composedPath());
     // If the ancestor of the clicked element is the SVG or the responses box, don't hide the responses
     if(!e.composedPath().includes(document.getElementById('cloud')) && !e.composedPath().includes(document.getElementById('responses')))
     {
@@ -195,7 +193,6 @@ window.onresize = function(event) {
 
 let worker = new Worker(new URL('./worker.js', import.meta.url));
 worker.onmessage = onWorkerMessage;
-console.log(`Worker loaded`);
 if (module.hot) {
     // Force the worker to reload regardless
     module.hot.addStatusHandler((status) => {
@@ -206,7 +203,6 @@ if (module.hot) {
             case 'apply':
                 worker = new Worker(new URL('./worker.js', import.meta.url));
                 worker.onmessage = onWorkerMessage;
-                console.log(`Worker reloaded`);
         }
     });
 }

@@ -8,6 +8,8 @@ const its = nlp.its;
 const as = nlp.as;
 
 
+console.log('Worker started.');
+
 /**
  * Response object
  * @typedef {Object} Response
