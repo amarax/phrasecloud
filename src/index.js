@@ -239,3 +239,20 @@ function updateNgramLength(e) {
 
 ngramLengthSlider.oninput = updateNgramLength;
 updateNgramLength({target:ngramLengthSlider});
+
+
+const downloadButton = document.getElementById('download');
+
+downloadButton.onclick = function() {
+    const svg = document.getElementById('cloud');
+    const serializer = new XMLSerializer();
+    const source = serializer.serializeToString(svg);
+
+    const blob = new Blob([source], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'phrase cloud.svg';
+    link.click();
+};
