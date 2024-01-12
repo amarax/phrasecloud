@@ -76,9 +76,9 @@ function generateNgrams(data) {
             })
         });
 
-        // Remove ngrams that only appear once
+        // Remove ngrams that do not repeat
         Object.entries(ngrams).forEach(([k,v])=>{
-            if(v.length < 4) {
+            if(v.length < 3) {
                 delete ngrams[k];
             }
         });

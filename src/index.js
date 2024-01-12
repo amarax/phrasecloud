@@ -297,3 +297,9 @@ downloadButton.onclick = function() {
     link.download = 'phrase cloud.svg';
     link.click();
 };
+
+
+import defaultText from './default.txt';
+fetch(defaultText)
+    .then(r=>r.text())
+    .then(t=>{worker.postMessage({ responses: t.split('\n').filter(r=>r.length > 0) })});
