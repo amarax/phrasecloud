@@ -64,21 +64,27 @@ var maxPhrases = 100;
 function layout(ngramList) {
     ngramList = ngramList.slice(0,maxPhrases);
 
+
     // Get the ngram with most responses
     let maxResponses = Math.max(...ngramList.map(n=>n.responses.length));
-    let maxApproxPhraseLength = Math.max(...ngramList.map(n=>n.phrase.length*n.responses.length/maxResponses));
+    let maxPhraseLength = Math.max(...ngramList.map(n=>n.phrase.length));
+
+    function size(d) {
+        return Math.sqrt(d.responses.length/maxResponses);
+    }
+    let maxApproxPhraseWidth = Math.max(...ngramList.map(n=>n.phrase.length*size(n)));
 
     // Make the font size fit in the SVG
     // Fit roughly 8 large rows
     // And make sure the longest phrase fits (character count * 0.6 is a rough estimate of the width of the text for English)
     let cloudRect = document.getElementById('cloud').getBoundingClientRect();
-    let maxFontSize = Math.min(cloudRect.height / 8, cloudRect.width / (maxApproxPhraseLength*.6));
+    let maxFontSize = Math.min(cloudRect.height / 8, cloudRect.width / (maxApproxPhraseWidth*.6));
     
 
     let layout = cloud()
         .size([cloudRect.width, cloudRect.height])
         .words(ngramList.map(function(d) {
-            return {text: d.phrase, key:d.ngram, size: d.responses.length * maxFontSize/(maxResponses), responses:d.responses};
+            return {text: d.phrase, key:d.ngram, size:maxFontSize * size(d), responses:d.responses};
         }))
         .padding(4)
         

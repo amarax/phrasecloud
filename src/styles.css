@@ -2,6 +2,12 @@
     display: none;
 }
 
+svg#cloud {
+    /* Text is not selectable */
+    user-select: none;
+    
+}
+
 #responses {
     width: 400px;
     position: absolute;
@@ -19,6 +25,7 @@
     border-radius: 8px;
 
     pointer-events: none;
+
 }
 
 #responses ul {
