@@ -119,13 +119,38 @@ function draw(words, layout) {
                         let responses = d.responses.map(r=>`<li>${r.markup}</li>`);
             
                         let rect = d3.select(this).node().getBoundingClientRect();
-                        let topleft = [rect.x, rect.y+rect.height]
+                        let pos = [rect.x, rect.y+rect.height]
+                        let posAnchors = ['left','top'];
+
+                        let responsesWidth = document.getElementById('responses').computedStyleMap().get('width').value;
+                        let responsesMaxHeight = document.getElementById('responses').computedStyleMap().get('max-height').value;
+
+                        // Nudge the box to the left if it's too close to the right edge
+                        let margin = 32;
+                        console.log(pos[0], responsesWidth, window.innerWidth)
+                        if(pos[0] + responsesWidth + margin > window.innerWidth) {
+                            pos[0] = window.innerWidth - rect.x - rect.width;
+                            posAnchors[0] = 'right';
+                        }
+
+                        // Place the box above the text if it's too close to the bottom edge
+                        if(pos[1] + responsesMaxHeight + margin > window.innerHeight) {
+                            pos[1] = window.innerHeight - rect.y;
+                            posAnchors[1] = 'bottom';
+                        }
+
                         d3.select('#responses')
                             .html(`Count: ${responses?.length}<br /><ul>${responses?.join('')}</ul>`)
                             .classed('hidden', false)
-                            .style('top', `${topleft[1]}px`)
-                            .style('left', `${topleft[0]}px`);
-            
+                            .style('left', null)
+                            .style('top', null)
+                            .style('right', null)
+                            .style('bottom', null)
+                            .style(posAnchors[1], `${pos[1]}px`)
+                            .style(posAnchors[0], `${pos[0]}px`)
+
+                        // Scroll to top of responses
+                        document.getElementById('responses').scrollTop = 0;
                     })
                     .on('mouseout', function(d) {
                         d3.select('#responses').classed('hidden', true);
@@ -148,9 +173,23 @@ function draw(words, layout) {
 }
 
 
-// When the viewport resizes, resize the cloud
+// When clicking outside the SVG, hide the responses box
+document.addEventListener('click', (e)=>{
+    console.log(e.composedPath());
+    // If the ancestor of the clicked element is the SVG or the responses box, don't hide the responses
+    if(!e.composedPath().includes(document.getElementById('cloud')) && !e.composedPath().includes(document.getElementById('responses')))
+    {
+        d3.select('#responses').classed('hidden', true);
+    }
+});
+
+
+// When the viewport resizes, resize the cloud 0.3s after the last resize event
 window.onresize = function(event) {
-    layout(ngramList);
+    clearTimeout(window.resizeTimer);
+    window.resizeTimer = setTimeout(function() {
+        layout(ngramList);
+    }, 100);
 }
 
 
