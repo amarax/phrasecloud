@@ -154,6 +154,11 @@ function draw(words, layout) {
                     .on('mouseout', function(d) {
                         d3.select('#responses').classed('hidden', true);
                     })
+
+                    .style("opacity", 0)
+                    .transition()
+                    .duration(500)
+                    .style("opacity", 1)
             },
             function(update) {
                 update.text(d=>d.text)
@@ -163,7 +168,12 @@ function draw(words, layout) {
                     .style("font-size", function(d) { return d.size + "px"; })
             },
             function(exit) {
-                exit.remove();
+                exit
+                    .style("opacity", 1)
+                    .transition()
+                    .duration(300)
+                    .style("opacity", 0)
+                    .remove();
             }
         )
 
