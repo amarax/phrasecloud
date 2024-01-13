@@ -23,8 +23,15 @@ var stats = {}
 var cloudFont = {family:'sans-serif', weight:'bold'}; // Use this to maintain full compatibility for SVG export
 
 
-var maxPhrases = 200;
+var maxPhrases = 100;
 async function layout(ngrams) {
+    // If ngrams is empty, display a message
+    if(ngrams.length === 0) {
+        displayCloudMessage('No repeating phrases found.');
+        return;
+    }
+
+    
     // Make sure the cloudFont is loaded
     // Note that this DOES NOT work when a font is not used in the document yet
     let font = `${cloudFont.weight ? cloudFont.weight + " " : ''}1em "${cloudFont.family}"`
@@ -65,7 +72,7 @@ async function layout(ngrams) {
         .fontSize(function(d) { return d.size; })
         .on("end", words=>{
             draw(words, layout);
-            updateStatus(`Done! (Responses: ${Object.entries(stats).map(([k,v])=>`${k}: ${v}`).join(', ')}, Phrases: ${ngramList.length})`);
+            updateStatus(`Done! (Responses: ${Object.entries(stats).map(([k,v])=>`${k}: ${v}`).join(', ')}, Phrases: ${ngramList.length})`, stats);
         });
 
     cloudFont.weight && layout.fontWeight(cloudFont.weight);
@@ -222,22 +229,32 @@ reader.onload = async (e) => {
                 break;
             }
         }
-        await layout(ngramList);
+
+        if(ngramList.length === 0) {
+            document.getElementById('columnSelect').value = defaultColumn;
+
+            displayCloudMessage('No repeating phrases found in this file.');
+        } else {
+            await layout(ngramList);
+        }
 
     } else {
-        // Disable the column select
-        d3.select('#columnSelect')
-            .attr('disabled', true)
-            .selectAll('option')
-            .data(['Not a CSV file'])
-            .join('option')
-                .text(d=>console.log(d)||d)
-
+        disableColumnSelect();
 
         postResponses(reader.result);
     }
 
 };
+
+function disableColumnSelect() {
+    // Disable the column select
+    d3.select('#columnSelect')
+    .attr('disabled', true)
+    .selectAll('option')
+    .data(['Not a CSV file'])
+    .join('option')
+        .text(d=>console.log(d)||d)
+}
 
 async function postResponses(inputText) {
 
@@ -254,7 +271,7 @@ async function postResponses(inputText) {
     } else {
         responses = inputText.split('\n').filter(r=>r.length > 0);
     }
-        
+
     if(responses) {
         ngramList = await ngram.generateNgramList(responses);
         await layout(ngramList);
@@ -281,7 +298,7 @@ fileInput.onchange = (e) => {
         status.innerHTML = 'Loading...';
 
         if(file) {
-            reader.readAsText(file);
+            loadFile(file);
         }
     }
 }
@@ -309,19 +326,59 @@ function isTextFile(e) {
     return false;
 }
 
+
+function displayCloudMessage(message) {
+    // Hide the responses box
+    d3.select('#responses').classed('hidden', true);
+
+    // Replace the cloud with a loading message
+    d3.select('#cloud')
+    .select('g')
+    .selectAll('text')
+    .remove();
+
+    d3.select('#cloud')
+    .select('g')
+        .attr('transform', null)
+    .append('text')
+        .classed('loading', true)
+        .attr('x', '50%')
+        .attr('y', '50%')
+        .attr('text-anchor', 'middle')
+        .text(message);
+}
+
+
+function loadFile(file) {
+    if(file) {
+        displayCloudMessage('Loading file...');        
+
+        reader.readAsText(file);
+    }
+}
+
+
 import dropZone from './dropZone.js';
 let drop = dropZone(document.getRootNode())
     .isallowed(e=>isText(e) || isTextFile(e))
     .ondrop(e=>{
         if(isText(e)) {
             file = null;
+            // Reset the file input
+            fileInput.value = null;
+
+            disableColumnSelect();
 
             let text = e.dataTransfer.getData('text/plain');
             postResponses(text);
+
+            displayCloudMessage('Processing text...');
         } else if(isTextFile(e)) {
             file = e.dataTransfer.items[0]?.getAsFile() || e.dataTransfer.files[0];
-            
-            reader.readAsText(file);
+
+            fileInput.value = null;
+
+            loadFile(file)
         }
         console.log("Processing text...");
     });

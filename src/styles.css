@@ -98,6 +98,7 @@ select#columnSelect {
     background: rgba(255, 255, 255, 0.9);
 
     pointer-events: none;
+    z-index: 100;
 
 }
 
@@ -121,7 +122,6 @@ select#columnSelect {
 
     font-size: min(64px, 5vh);
 
-    z-index: 100;
 
 
     border: 4px black dashed;

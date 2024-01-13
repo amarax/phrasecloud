@@ -59,6 +59,8 @@ function generateNgrams(data) {
 
             categories[c]++;
         });
+        self.postMessage({type:'update', content:{categories:Object.keys(categories).length}});
+
         self.postMessage({type:'categories', content:{categories}});
 
         // End performance timer

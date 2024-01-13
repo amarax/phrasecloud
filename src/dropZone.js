@@ -39,6 +39,7 @@ function dropZone(element) {
     // Add event listeners
     element.addEventListener('dragover', (e) => {
         e.preventDefault();
+        e.stopPropagation();
 
         if(!typeof isallowed === 'function' || isallowed(e)) {
             show();
@@ -47,11 +48,19 @@ function dropZone(element) {
 
     element.addEventListener('dragleave', (e) => {
         e.preventDefault();
-        hide();
+        e.stopPropagation();
+
+        // Only hide if we are moving out of the window
+        if(e.clientX === 0 && e.clientY === 0) {
+            hide();
+        }
+        
     });
 
     element.addEventListener('drop', (e) => {
         e.preventDefault();
+        e.stopPropagation();
+        
         hide();
 
         if(typeof ondrop === 'function') {
