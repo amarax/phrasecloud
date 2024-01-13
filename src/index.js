@@ -190,7 +190,7 @@ window.onresize = function(event) {
 
 const reader = new FileReader();
 const defaultColumn = 0;
-reader.onload = (e) => {
+reader.onload = async (e) => {
     let csv = d3.csvParseRows( e.target.result );
 
     if(file?.type === 'text/csv') {
@@ -206,6 +206,24 @@ reader.onload = (e) => {
 
         // Select the first column
         document.getElementById('columnSelect').value = defaultColumn;
+
+        // During the first load, we will cycle through the columns from defaultColumn until we find one that has data
+        // This is because the first column is often a timestamp or ID column
+        for(let column = defaultColumn; column < columns.length; column++) {
+            let responses = csv.map(row=>row[column]);
+            responses.shift(); // Remove the first row (column names)
+
+            responses = responses.filter(r=>r.length > 0);
+
+            ngramList = await ngram.generateNgramList(responses);
+            if(ngramList.length > 0) {
+                // Set the column select to the column that has data
+                document.getElementById('columnSelect').value = column;
+                break;
+            }
+        }
+        await layout(ngramList);
+
     } else {
         // Disable the column select
         d3.select('#columnSelect')
@@ -214,9 +232,11 @@ reader.onload = (e) => {
             .data(['Not a CSV file'])
             .join('option')
                 .text(d=>console.log(d)||d)
+
+
+        postResponses(reader.result);
     }
 
-    postResponses(e.target.result);
 };
 
 async function postResponses(inputText) {
@@ -228,7 +248,9 @@ async function postResponses(inputText) {
         responses = csv.map(row=>row[column]);
         
         // Remove the first row (column names)
-        responses.shift(); 
+        responses.shift();
+
+        responses = responses.filter(r=>r.length > 0);
     } else {
         responses = inputText.split('\n').filter(r=>r.length > 0);
     }

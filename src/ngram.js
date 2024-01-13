@@ -68,6 +68,8 @@ let generateResolve = null;
 var onWorkerMessage = (e) => {
     let msg = e.data;
 
+    let ngramList = null;
+
     switch(msg.type) {
         case 'update':
             let stats = {...msg.content};
@@ -77,7 +79,7 @@ var onWorkerMessage = (e) => {
             let ngrams = msg.content.ngrams;
 
             // Get the most common phrases and their responses
-            let ngramList = Object.entries(ngrams).map(([k,v])=>({
+            ngramList = Object.entries(ngrams).map(([k,v])=>({
                 ngram:k, 
                 phrase:v.commonPhrase, 
                 responses:v.responses,
