@@ -28,7 +28,7 @@ console.log('Worker started.');
 
 /**
  * N-gram message return object
- * @typedef {Object.<string, ngram>} ngrams - The ngrams using their its.lemma form as the key
+ * @typedef {Object.<string, ngram>} ngrams - The ngrams using a more basic form as the key
  */
 
 
@@ -69,7 +69,7 @@ function generateNgrams(data) {
     let usedIndices = [];
 
     function key(ngram) {
-        return ngram.map(t=>t.out(its.lemma)).join(' ');
+        return ngram.map(t=>t.out(its.stem)).join(' ');
     }
 
     for(let ngramLength = 6; ngramLength >= minNgramLength; ngramLength--) {
@@ -112,18 +112,35 @@ function generateNgrams(data) {
         });
     }
 
+    const tags = ['<span class="match">', '</span>'];
+
     // For each ngram, get the original text that's bounded by the first and last token
     Object.entries(ngrams).forEach(([k,v])=>{
+        // Create a map of parent documents to duplicated documents
+        // This will allow markups to show multiple times in a single response for the same ngram
+        // while other ngrams won't affect the markup
+        let documentMap = new Map();
+        v.forEach(entry=>{
+            let parent = entry.ngram[0].parentDocument();
+            if(!documentMap.has(parent)) {
+                documentMap.set(parent, nlp.readDoc(parent.out()));
+            }
+        });
+
         ngrams[k] = v.map(entry=>{
             // Duplicate the document so the markup doesn't affect the original
-            let response = entry.ngram[0].parentDocument().out();
-            let doc = nlp.readDoc(response);
+            let parent = entry.ngram[0].parentDocument();
+            let doc = documentMap.get(parent);
             let tokens = doc.tokens();
 
             let first = tokens.itemAt( entry.ngram[0].index() );
             let last = tokens.itemAt( entry.ngram[entry.ngram.length - 1].index() );
 
-            let tags = ['<span class="match">', '</span>'];
+            // If the tags already appear in the text, store the matches so we can ignore them later
+            let regex = new RegExp(tags[0] + '(.*?)' + tags[1], 'g');
+            let markupBefore = doc.out(its.markedUpText);
+            let matchesBefore = markupBefore.matchAll(regex);
+
             if(entry.ngram.length == 1) {
                 first.markup(tags[0],tags[1]);
             } else {
@@ -131,15 +148,32 @@ function generateNgrams(data) {
                 last.markup('',tags[1]);
             }
 
-            let markup = first.parentDocument().out(its.markedUpText);
+            let markupAfter = doc.out(its.markedUpText);
+            let matchesAfter = markupAfter.matchAll(regex);
+
+            // Find the first match that has a different starting index
+            let mb = [...matchesBefore].sort((a,b)=>a.index - b.index);
+            let ma = [...matchesAfter].sort((a,b)=>a.index - b.index);
+            let match = null;
+            for(let i = 0; i < ma.length; i++) {
+                if(i >= mb.length || mb[i].index != ma[i].index) {
+                    match = ma[i];
+                    break;
+                }
+            }
+
+            // Log to console if there are zero matches
+            if(!match) {
+                console.error('Could not find new match.', entry.ngram.map(t=>t.out()).join(' '));
+                console.error('Before:', markupBefore);
+                console.error('After:', markupAfter);
+            }
             
-            // Extract the phrase from the text between the markup
-            let phrase = markup.slice(markup.indexOf(tags[0]) + tags[0].length, markup.indexOf(tags[1]));
+            // Extract the phrase from the capture group
+            let phrase = match[1];
 
             return {
-                response,
                 phrase,
-                markup
             };
         });
 
@@ -155,7 +189,10 @@ function generateNgrams(data) {
 
         ngrams[k] = {
             commonPhrase,
-            responses: ngrams[k]
+            responses: [...documentMap.values()].map(d=>({
+                response: d.out(),
+                markup: d.out(its.markedUpText)
+            }))
         }
     });
 
