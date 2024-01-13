@@ -5,7 +5,7 @@ When you drag & drop csv files into Phrase Cloud Generator, all processing is do
 In the Phrase Cloud Generator, you can click on words or phrases to reveal detailed insights about their usage and context. The Phrase Cloud Generator's ability to handle csv survey responses makes it incredibly versatile.
 Use the drag and drop feature to upload any text passage, and watch as the Phrase Cloud Generator transforms it into a visually appealing cloud.
 The Phrase Cloud Generator is not just about visual flair; its drag and drop functionality is complemented by robust analytical capabilities.
-When you click on words or phrases, the Phrase Cloud Generator displays frequency, context, and trends in your csv survey responses or any text passage.
+When you click on words or phrases, the Phrase Cloud Generator displays frequency, context, and trends in your csv survey responses or any text passages.
 All processing is done locally, ensuring your data's privacy.
 Additionally, the Phrase Cloud Generator allows you to click on words or phrases to uncover patterns that might not be immediately apparent.
 Conclusively, the Phrase Cloud Generator stands out for its drag and drop simplicity, the insightful results when you click on words or phrases, and its ability to process csv survey responses and text passages privately, since all processing is done locally.

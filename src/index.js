@@ -61,9 +61,11 @@ function onWorkerMessage(e) {
 }
 
 var maxPhrases = 100;
-function layout(ngramList) {
-    ngramList = ngramList.slice(0,maxPhrases);
+async function layout(ngramList) {
+    // Wait for all fonts to be ready, because font metrics are used to size the cloud
+    await document.fonts.ready;
 
+    ngramList = ngramList.slice(0,maxPhrases);
 
     // Get the ngram with most responses
     let maxResponses = Math.max(...ngramList.map(n=>n.responses.length));
@@ -78,9 +80,8 @@ function layout(ngramList) {
     // Fit roughly 8 large rows
     // And make sure the longest phrase fits (character count * 0.6 is a rough estimate of the width of the text for English)
     let cloudRect = document.getElementById('cloud').getBoundingClientRect();
-    let maxFontSize = Math.min(cloudRect.height / 8, cloudRect.width / (maxApproxPhraseWidth*.5));
+    let maxFontSize = Math.min(cloudRect.height / 8, cloudRect.width / (maxApproxPhraseWidth*.6));
     
-
     let layout = cloud()
         .size([cloudRect.width, cloudRect.height])
         .words(ngramList.map(function(d) {
@@ -88,7 +89,8 @@ function layout(ngramList) {
         }))
         .padding(4)
         
-        .font("Impact")
+        .font("Manrope")
+        .fontWeight("800")
         .rotate(()=>0)
         .fontSize(function(d) { return d.size; })
         .on("end", words=>(draw(words, layout)));
@@ -97,7 +99,9 @@ function layout(ngramList) {
 }
 
 function draw(words, layout) {
-    // Clear the svg
+    // Remove the loading message in the SVG
+    d3.select('#cloud').select('.loading')?.remove();
+
     d3.select("#cloud")
       .select("g")
         .attr("transform", "translate(" + layout.size()[0] / 2 + "," + layout.size()[1] / 2 + ")")
@@ -108,7 +112,6 @@ function draw(words, layout) {
                 enter.append("text")
                     .attr("data-key", d=>d.key)
                     .style("font-size", function(d) { return d.size + "px"; })
-                    .style("font-family", "Impact")
                     .attr("text-anchor", "middle")
                     .attr("transform", function(d) {
                         return "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")";
@@ -192,7 +195,8 @@ document.addEventListener('click', (e)=>{
 });
 
 
-// When the viewport resizes, resize the cloud 0.3s after the last resize event
+// When the viewport resizes, resize the cloud a short time after the last resize event 
+// to ensure the cloud is sized correctly and doesn't jump around while resizing
 window.onresize = function(event) {
     clearTimeout(window.resizeTimer);
     window.resizeTimer = setTimeout(function() {
@@ -310,6 +314,9 @@ downloadButton.onclick = function() {
 
 
 import defaultText from './default.txt';
+
 fetch(defaultText)
-    .then(r=>r.text())
-    .then(t=>{worker.postMessage({ responses: t.split('\n').filter(r=>r.length > 0) })});
+    .then(r => r.text())
+    .then(t => {
+        worker.postMessage({ responses: t.split('\n').filter(r => r.length > 0) });
+    });
