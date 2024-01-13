@@ -3,85 +3,28 @@ import cloud from 'd3-cloud';
 
 import './styles.css';
 
+import ngram from './ngram.js';
+
 const status = document.getElementById('status');
 
 
-function updateStatus(message) {
+function updateStatus(message, s) {
     status.innerHTML = message;
+
+    if(s) {
+        stats = s;
+    }
 }
-
-/**
- * @typedef {import('./worker.js').ngrams} ngrams
- */
-
-/**
- * Worker Message Event Object
- * @typedef {Object} WorkerMessageEvent
- * @property {Object} data - The message data
- * @property {string} data.type - The type of message
- * @property {Object} data.content - The message content
- * @property {string} data.content.responses - The number of responses
- * @property {ngrams} data.content.ngrams - The ngrams
- */
-
 
 var ngramList = null;
 var stats = {}
-/**
- * Worker message handler
- * @param {WorkerMessageEvent} e - The message event
- * @returns {void}
- */
-async function onWorkerMessage(e) {
-    let msg = e.data;
-    switch(msg.type) {
-        case 'update':
-            stats = {...msg.content};
-            updateStatus(`Found ${Object.entries(msg.content).map(([k,v])=>`${k}: ${v}`).join(', ')}, generating...`);
-            break;
-        case 'ngrams':
-            let ngrams = msg.content.ngrams;
-
-            updateStatus(`Drawing cloud...`);
-
-            // Get the most common phrases and their responses
-            ngramList = Object.entries(ngrams).map(([k,v])=>({
-                ngram:k, 
-                phrase:v.commonPhrase, 
-                responses:v.responses,
-                count: v.responses.length
-            }));
-            ngramList = ngramList.sort((a,b)=>b.count - a.count);
-
-            await layout(ngramList);
-
-            break;
-        case 'categories':
-            let categories = msg.content.categories;
-            updateStatus(`Drawing cloud...`);
-
-            ngramList = Object.entries(categories).map(([k,v])=>({
-                ngram:k, 
-                phrase:k, 
-                count: v,
-            }));
-            ngramList = ngramList.sort((a,b)=>b.count - a.count);
-
-            await layout(ngramList);
-
-            break;
-        default:
-            console.log('Unknown message type', msg.type);
-    }
-    
-}
 
 // var cloudFont = {family:'Manrope', weight:'800'};
 var cloudFont = {family:'sans-serif', weight:'bold'}; // Use this to maintain full compatibility for SVG export
 
 
 var maxPhrases = 200;
-async function layout(ngramList) {
+async function layout(ngrams) {
     // Make sure the cloudFont is loaded
     // Note that this DOES NOT work when a font is not used in the document yet
     let font = `${cloudFont.weight ? cloudFont.weight + " " : ''}1em "${cloudFont.family}"`
@@ -89,27 +32,27 @@ async function layout(ngramList) {
         await document.fonts.load(font);
     }
 
-    ngramList = ngramList.slice(0,maxPhrases);
+    ngrams = ngrams.slice(0,maxPhrases);
 
     // Get the ngram with most responses
-    let maxResponses = Math.max(...ngramList.map(n=>n.count));
-    let maxPhraseLength = Math.max(...ngramList.map(n=>n.phrase.length));
+    let maxResponses = Math.max(...ngrams.map(n=>n.count));
+    let maxPhraseLength = Math.max(...ngrams.map(n=>n.phrase.length));
 
     function size(d) {
         return Math.sqrt(d.count/maxResponses);
         // return d.count/maxResponses;
     }
-    let maxApproxPhraseWidth = Math.max(...ngramList.map(n=>n.phrase.length*size(n)));
+    let maxApproxPhraseWidth = Math.max(...ngrams.map(n=>n.phrase.length*size(n)));
 
     // Make the font size fit in the SVG
     // Fit roughly 8 large rows
     // And make sure the longest phrase fits (character count * 0.6 is a rough estimate of the width of the text for English)
     let cloudRect = document.getElementById('cloud').getBoundingClientRect();
-    let maxFontSize = Math.min(cloudRect.height / Math.min(8, ngramList.length), cloudRect.width / (maxApproxPhraseWidth*.6));
+    let maxFontSize = Math.min(cloudRect.height / Math.min(8, ngrams.length), cloudRect.width / (maxApproxPhraseWidth*.6));
     
     let layout = cloud()
         .size([cloudRect.width, cloudRect.height])
-        .words(ngramList.map(function(d) {
+        .words(ngrams.map(function(d) {
             let w = {text: d.phrase, key:d.ngram, size:maxFontSize * size(d), count:d.count};
             if(d.responses) w.responses = d.responses;
             return w;
@@ -120,7 +63,10 @@ async function layout(ngramList) {
         // .fontWeight(cloudFont.weight)
         .rotate(()=>0)
         .fontSize(function(d) { return d.size; })
-        .on("end", words=>(draw(words, layout)));
+        .on("end", words=>{
+            draw(words, layout);
+            updateStatus(`Done! (Responses: ${Object.entries(stats).map(([k,v])=>`${k}: ${v}`).join(', ')}, Phrases: ${ngramList.length})`);
+        });
 
     cloudFont.weight && layout.fontWeight(cloudFont.weight);
     layout.start();
@@ -220,8 +166,6 @@ function draw(words, layout) {
                 }
             )
 
-    updateStatus(`Done! (Responses: ${Object.entries(stats).map(([k,v])=>`${k}: ${v}`).join(', ')}, Phrases: ${ngramList.length})`);
-
 }
 
 
@@ -243,29 +187,6 @@ window.onresize = function(event) {
         layout(ngramList);
     }, 100);
 }
-
-
-let worker = new Worker(new URL('./worker.js', import.meta.url));
-worker.onmessage = onWorkerMessage;
-if (module.hot) {
-    // Force the worker to reload regardless
-    module.hot.addStatusHandler((status) => {
-        switch(status) {
-            case 'dispose':
-                worker.terminate();
-                break;
-            case 'apply':
-                worker = new Worker(new URL('./worker.js', import.meta.url));
-                worker.onmessage = onWorkerMessage;
-
-                // If the reader already has a file, post it to the worker
-                if(reader.result) {
-                    postResponses(reader.result);
-                }
-        }
-    });
-}
-
 
 const reader = new FileReader();
 const defaultColumn = 0;
@@ -298,8 +219,7 @@ reader.onload = (e) => {
     postResponses(e.target.result);
 };
 
-// Post responses to the worker
-function postResponses(inputText) {
+async function postResponses(inputText) {
 
     let responses = null;
     if(file?.type === 'text/csv') {
@@ -313,10 +233,11 @@ function postResponses(inputText) {
         responses = inputText.split('\n').filter(r=>r.length > 0);
     }
         
-    if(responses)
-        worker.postMessage({ responses });
+    if(responses) {
+        ngramList = await ngram.generateNgramList(responses);
+        await layout(ngramList);
+    }
 }
-
 
 // When the column select changes, process the file via wink-nlp
 const columnSelect = document.getElementById('columnSelect');
@@ -343,8 +264,9 @@ fileInput.onchange = (e) => {
     }
 }
 
-document.getElementById('generate').onclick = (e) => {
-    worker.postMessage({ generate: true });
+document.getElementById('generate').onclick = async (e) => {
+    let ngrams = await ngram.generateNgramList();
+    await layout(ngrams);
 }
 
 function isText(e) {
@@ -386,9 +308,12 @@ let drop = dropZone(document.getRootNode())
 const ngramLengthSlider = document.getElementById('ngramLength');
 const ngramLengthDisplay = document.getElementById('ngramLengthDisplay');
 
-function updateNgramLength(e) {
+async function updateNgramLength(e) {
     ngramLengthDisplay.textContent = e.target.value;
-    worker.postMessage({ minNgramLength: e.target.value });
+    ngramList = await ngram.updateSettings({ minNgramLength: e.target.value });
+
+    if(ngramList)
+        await layout(ngramList);
 }
 
 ngramLengthSlider.oninput = updateNgramLength;
@@ -434,6 +359,8 @@ downloadButton.onclick = function() {
 
 
 import defaultText from './default.txt';
+
+ngram.onStatusUpdate = updateStatus;
 
 fetch(defaultText)
     .then(r => r.text())
