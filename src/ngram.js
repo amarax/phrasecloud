@@ -155,10 +155,20 @@ let ngram = {
 
 var onWorkerReload = null;
 
+/** 
+ * @callback workerReloadCallback
+ * @param {ngramList} ngramList - The ngram list
+ * @returns {void}
+ */
+
 // For development purposes, add an event handler for when the worker is updated
 if(module.hot) {
     ngram = {
         ...ngram,
+
+        /**
+         * @param {workerReloadCallback} callback - The callback function
+         */
         set onWorkerReload(callback) {
             onWorkerReload = callback;
         }
