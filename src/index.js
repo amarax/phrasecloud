@@ -60,10 +60,18 @@ function onWorkerMessage(e) {
     
 }
 
+// var cloudFont = {family:'Manrope', weight:'800'};
+var cloudFont = {family:'sans-serif', weight:'bold'}; // Use this to maintain full compatibility for SVG export
+
+
 var maxPhrases = 100;
 async function layout(ngramList) {
-    // Wait for all fonts to be ready, because font metrics are used to size the cloud
-    await document.fonts.ready;
+    // Make sure the cloudFont is loaded
+    // Note that this DOES NOT work when a font is not used in the document yet
+    let font = `${cloudFont.weight ? cloudFont.weight + " " : ''}1em "${cloudFont.family}"`
+    if(!document.fonts.check(font)) {
+        await document.fonts.load(font);
+    }
 
     ngramList = ngramList.slice(0,maxPhrases);
 
@@ -89,12 +97,13 @@ async function layout(ngramList) {
         }))
         .padding(4)
         
-        .font("Manrope")
-        .fontWeight("800")
+        .font(cloudFont.family)
+        // .fontWeight(cloudFont.weight)
         .rotate(()=>0)
         .fontSize(function(d) { return d.size; })
         .on("end", words=>(draw(words, layout)));
 
+    cloudFont.weight && layout.fontWeight(cloudFont.weight);
     layout.start();
 }
 
@@ -103,82 +112,84 @@ function draw(words, layout) {
     d3.select('#cloud').select('.loading')?.remove();
 
     d3.select("#cloud")
-      .select("g")
-        .attr("transform", "translate(" + layout.size()[0] / 2 + "," + layout.size()[1] / 2 + ")")
-      .selectAll("text")
-        .data(words, d=>d.key)
-        .join(
-            function(enter) {
-                enter.append("text")
-                    .attr("data-key", d=>d.key)
-                    .style("font-size", function(d) { return d.size + "px"; })
-                    .attr("text-anchor", "middle")
-                    .attr("transform", function(d) {
-                        return "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")";
-                    })
-                    .text(function(d) { return d.text; })
-                    .on('mouseover', function(e, d) {
-                        // Get responses for this ngram
-                        let responses = d.responses.map(r=>`<li>${r.markup}</li>`);
-            
-                        let rect = d3.select(this).node().getBoundingClientRect();
-                        let pos = [rect.x, rect.y+rect.height]
-                        let posAnchors = ['left','top'];
+        .select("g")
+            .attr("transform", "translate(" + layout.size()[0] / 2 + "," + layout.size()[1] / 2 + ")")
+            .style("font-family", cloudFont.family)
+            .style("font-weight", cloudFont.weight)
+        .selectAll("text")
+            .data(words, d=>d.key)
+            .join(
+                function(enter) {
+                    enter.append("text")
+                        .attr("data-key", d=>d.key)
+                        .style("font-size", function(d) { return d.size + "px"; })
+                        .attr("text-anchor", "middle")
+                        .attr("transform", function(d) {
+                            return "translate(" + [d.x, d.y] + ")";
+                        })
+                        .text(function(d) { return d.text; })
+                        .on('mouseover', function(e, d) {
+                            // Get responses for this ngram
+                            let responses = d.responses.map(r=>`<li>${r.markup}</li>`);
+                
+                            let rect = d3.select(this).node().getBoundingClientRect();
+                            let pos = [rect.x, rect.y+rect.height]
+                            let posAnchors = ['left','top'];
 
-                        let responsesWidth = document.getElementById('responses').computedStyleMap().get('width').value;
-                        let responsesMaxHeight = document.getElementById('responses').computedStyleMap().get('max-height').value;
+                            let responsesWidth = document.getElementById('responses').computedStyleMap().get('width').value;
+                            let responsesMaxHeight = document.getElementById('responses').computedStyleMap().get('max-height').value;
 
-                        // Nudge the box to the left if it's too close to the right edge
-                        let margin = 32;
-                        if(pos[0] + responsesWidth + margin > window.innerWidth) {
-                            pos[0] = window.innerWidth - rect.x - rect.width;
-                            posAnchors[0] = 'right';
-                        }
+                            // Nudge the box to the left if it's too close to the right edge
+                            let margin = 32;
+                            if(pos[0] + responsesWidth + margin > window.innerWidth) {
+                                pos[0] = window.innerWidth - rect.x - rect.width;
+                                posAnchors[0] = 'right';
+                            }
 
-                        // Place the box above the text if it's too close to the bottom edge
-                        if(pos[1] + responsesMaxHeight + margin > window.innerHeight) {
-                            pos[1] = window.innerHeight - rect.y;
-                            posAnchors[1] = 'bottom';
-                        }
+                            // Place the box above the text if it's too close to the bottom edge
+                            if(pos[1] + responsesMaxHeight + margin > window.innerHeight) {
+                                pos[1] = window.innerHeight - rect.y;
+                                posAnchors[1] = 'bottom';
+                            }
 
-                        d3.select('#responses')
-                            .html(`Count: ${responses?.length}<br /><ul>${responses?.join('')}</ul>`)
-                            .classed('hidden', false)
-                            .style('left', null)
-                            .style('top', null)
-                            .style('right', null)
-                            .style('bottom', null)
-                            .style(posAnchors[1], `${pos[1]}px`)
-                            .style(posAnchors[0], `${pos[0]}px`)
+                            d3.select('#responses')
+                                .html(`Count: ${responses?.length}<br /><ul>${responses?.join('')}</ul>`)
+                                .classed('hidden', false)
+                                .style('left', null)
+                                .style('top', null)
+                                .style('right', null)
+                                .style('bottom', null)
+                                .style(posAnchors[1], `${pos[1]}px`)
+                                .style(posAnchors[0], `${pos[0]}px`)
 
-                        // Scroll to top of responses
-                        document.getElementById('responses').scrollTop = 0;
-                    })
-                    .on('mouseout', function(d) {
-                        d3.select('#responses').classed('hidden', true);
-                    })
+                            // Scroll to top of responses
+                            document.getElementById('responses').scrollTop = 0;
+                        })
+                        .on('mouseout', function(d) {
+                            d3.select('#responses').classed('hidden', true);
+                        })
 
-                    .style("opacity", 0)
-                    .transition()
-                    .duration(500)
-                    .style("opacity", 1)
-            },
-            function(update) {
-                update.text(d=>d.text)
-                    .attr("transform", function(d) {
-                        return "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")";
-                    })
-                    .style("font-size", function(d) { return d.size + "px"; })
-            },
-            function(exit) {
-                exit
-                    .style("opacity", 1)
-                    .transition()
-                    .duration(300)
-                    .style("opacity", 0)
-                    .remove();
-            }
-        )
+                        .style("opacity", 0)
+                        .transition()
+                        .duration(500)
+                        .style("opacity", null)
+                },
+                function(update) {
+                    update.text(d=>d.text)
+                        .attr("transform", function(d) {
+                            return "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")";
+                        })
+                        .style("font-size", function(d) { return d.size + "px"; })
+                },
+                function(exit) {
+                    exit
+                        .style("opacity", 1)
+                        .transition()
+                        .duration(300)
+                        .style("opacity", 0)
+                        .remove();
+                }
+            )
 
     updateStatus(`Done! (Responses: ${Object.entries(stats).map(([k,v])=>`${k}: ${v}`).join(', ')}, Phrases: ${ngramList.length})`);
 
@@ -301,7 +312,24 @@ const downloadButton = document.getElementById('download');
 downloadButton.onclick = function() {
     const svg = document.getElementById('cloud');
     const serializer = new XMLSerializer();
-    const source = serializer.serializeToString(svg);
+    let source = serializer.serializeToString(svg);
+
+    // Bake the width and height into pixels
+    const width = svg.getBoundingClientRect().width;
+    const height = svg.getBoundingClientRect().height;
+    const widthRegex = /<svg([^>]*)width="(\d+\S*)"/;
+    const heightRegex = /<svg([^>]*)height="(\d+\S*)"/;
+    const widthReplace = `<svg$1width="${Math.ceil(width)}px"`;
+    const heightReplace = `<svg$1height="${Math.ceil(height)}px"`;
+    source = source.replace(widthRegex, widthReplace);
+    source = source.replace(heightRegex, heightReplace);
+
+
+    // Include the font in the SVG
+    if(cloudFont.family !== 'sans-serif') {
+        const fontDeclaration = `<style type="text/css">@import url('https://fonts.googleapis.com/css2?family=${cloudFont.family}${cloudFont.weight?`:wght@${cloudFont.weight}`:""}');</style>`;
+        source = source.replace(/<svg([^>]*)>/, `<svg$1>${fontDeclaration}`);
+    }
 
     const blob = new Blob([source], { type: 'image/svg+xml;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -310,6 +338,10 @@ downloadButton.onclick = function() {
     link.href = url;
     link.download = 'phrase cloud.svg';
     link.click();
+
+    // Cleanup
+    link.remove();
+    URL.revokeObjectURL(url);
 };
 
 

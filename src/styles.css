@@ -7,8 +7,13 @@ svg#cloud {
     /* Text is not selectable */
     user-select: none;
     
-    background-color: #fff;
+    /* Default font for the text */
+    /* This also ensures that it will display and hence load */
+    font-family: 'Manrope', sans-serif;
+    font-weight: 800;
 }
+
+
 
 #responses {
     width: min(400px, 50vw);
@@ -51,12 +56,9 @@ svg#cloud {
 }
 
 #cloud text {
-    font-family: 'Manrope', sans-serif;
-    font-weight: 800;
-    
-
     cursor: pointer;
     transition: font-size 0.5s ease, transform 0.5s ease;
+
 }
 
 #cloud text:hover {
