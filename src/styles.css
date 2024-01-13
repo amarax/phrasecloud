@@ -13,7 +13,17 @@ svg#cloud {
     font-weight: 800;
 }
 
+input[type="file"] {
+    max-width: 13em;
+}
 
+select#columnSelect {
+    max-width: 10em;
+
+    overflow-x: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 
 #responses {
     width: min(400px, 50vw);
@@ -100,7 +110,7 @@ svg#cloud {
     left: 0;
 
     margin: 32px;
-
+    padding: 32px;
 
     z-index: 100;
 
@@ -109,7 +119,7 @@ svg#cloud {
     justify-content: center;
     align-items: center;
 
-    font-size: 64px;
+    font-size: min(64px, 5vh);
 
     z-index: 100;
 

@@ -20,6 +20,8 @@
     <div id="status">Nothing loaded</div>
     <div class="controls">
         <input type="file" id="textfile" accept=".txt, .csv" />
+        <select id="columnSelect" disabled><option>Not a CSV file</option></select>
+
         <input type="button" id="generate" value="Re-generate" />
 
         <label for="ngramLength">Minimum phrase length:</label>
@@ -36,6 +38,6 @@
 
     <div id="responses" class="hidden" style="top: 0; left: 0;"></div>
 
-    <div class="dropZoneBox hidden"><div class="outline">Drop Zone</div></div>
+    <div class="dropZoneBox hidden"><div class="outline">Drop text or CSV files here</div></div>
 </body>
 </html>

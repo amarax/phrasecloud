@@ -43,7 +43,24 @@ function slice(tokenCollection, start, length) {
 
 function generateNgrams(data) {
     // Remove repeated responses
-    const responses = [...new Set(data)].map(r=>nlp.readDoc(r));
+    const dataset = [...new Set(data)];
+    const responses = dataset.map(r=>nlp.readDoc(r));
+
+    let isLikelyCategoryColumn = data.length > 10 && dataset.length < 0.2 * data.length;
+    if(isLikelyCategoryColumn) {
+        // Just return the current dataset
+        let categories = {};
+        data.forEach(response=>{
+            let c = response.trim().toLowerCase();
+            if(!categories[c]) {
+                categories[c] = 0;
+            }
+
+            categories[c]++;
+        });
+        self.postMessage({type:'categories', content:{categories}});
+        return;
+    }
 
     self.postMessage({type:'update', content:{responses:responses.length}});
 
@@ -142,7 +159,7 @@ function generateNgrams(data) {
         }
     });
 
-    self.postMessage({type:'ngrams', content:{ngrams:ngrams}});
+    self.postMessage({type:'ngrams', content:{ngrams}});
 }
 
 

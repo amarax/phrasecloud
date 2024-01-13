@@ -32,7 +32,7 @@ var stats = {}
  * @param {WorkerMessageEvent} e - The message event
  * @returns {void}
  */
-function onWorkerMessage(e) {
+async function onWorkerMessage(e) {
     let msg = e.data;
     switch(msg.type) {
         case 'update':
@@ -47,11 +47,26 @@ function onWorkerMessage(e) {
             ngramList = Object.entries(ngrams).map(([k,v])=>({
                 ngram:k, 
                 phrase:v.commonPhrase, 
-                responses:v.responses
+                responses:v.responses,
+                count: v.responses.length
             }));
-            ngramList = ngramList.sort((a,b)=>b.responses.length - a.responses.length);
+            ngramList = ngramList.sort((a,b)=>b.count - a.count);
 
-            layout(ngramList);
+            await layout(ngramList);
+
+            break;
+        case 'categories':
+            let categories = msg.content.categories;
+            updateStatus(`Drawing cloud...`);
+
+            ngramList = Object.entries(categories).map(([k,v])=>({
+                ngram:k, 
+                phrase:k, 
+                count: v,
+            }));
+            ngramList = ngramList.sort((a,b)=>b.count - a.count);
+
+            await layout(ngramList);
 
             break;
         default:
@@ -76,11 +91,11 @@ async function layout(ngramList) {
     ngramList = ngramList.slice(0,maxPhrases);
 
     // Get the ngram with most responses
-    let maxResponses = Math.max(...ngramList.map(n=>n.responses.length));
+    let maxResponses = Math.max(...ngramList.map(n=>n.count));
     let maxPhraseLength = Math.max(...ngramList.map(n=>n.phrase.length));
 
     function size(d) {
-        return Math.sqrt(d.responses.length/maxResponses);
+        return Math.sqrt(d.count/maxResponses);
     }
     let maxApproxPhraseWidth = Math.max(...ngramList.map(n=>n.phrase.length*size(n)));
 
@@ -88,12 +103,14 @@ async function layout(ngramList) {
     // Fit roughly 8 large rows
     // And make sure the longest phrase fits (character count * 0.6 is a rough estimate of the width of the text for English)
     let cloudRect = document.getElementById('cloud').getBoundingClientRect();
-    let maxFontSize = Math.min(cloudRect.height / 8, cloudRect.width / (maxApproxPhraseWidth*.6));
+    let maxFontSize = Math.min(cloudRect.height / Math.min(8, ngramList.length), cloudRect.width / (maxApproxPhraseWidth*.6));
     
     let layout = cloud()
         .size([cloudRect.width, cloudRect.height])
         .words(ngramList.map(function(d) {
-            return {text: d.phrase, key:d.ngram, size:maxFontSize * size(d), responses:d.responses};
+            let w = {text: d.phrase, key:d.ngram, size:maxFontSize * size(d), count:d.count};
+            if(d.responses) w.responses = d.responses;
+            return w;
         }))
         .padding(4)
         
@@ -110,6 +127,9 @@ async function layout(ngramList) {
 function draw(words, layout) {
     // Remove the loading message in the SVG
     d3.select('#cloud').select('.loading')?.remove();
+
+    // Hide the responses box
+    d3.select('#responses').classed('hidden', true);
 
     d3.select("#cloud")
         .select("g")
@@ -129,8 +149,11 @@ function draw(words, layout) {
                         })
                         .text(function(d) { return d.text; })
                         .on('mouseover', function(e, d) {
+                            // Only do this if the transition is completed
+                            if(d3.select(this).style('opacity') < 1) return;
+
                             // Get responses for this ngram
-                            let responses = d.responses.map(r=>`<li>${r.markup}</li>`);
+                            let responses = d.responses?.map(r=>`<li>${r.markup}</li>`) || [];
                 
                             let rect = d3.select(this).node().getBoundingClientRect();
                             let pos = [rect.x, rect.y+rect.height]
@@ -153,7 +176,7 @@ function draw(words, layout) {
                             }
 
                             d3.select('#responses')
-                                .html(`Count: ${responses?.length}<br /><ul>${responses?.join('')}</ul>`)
+                                .html(`Count: ${d.count}<br /><ul>${responses?.join('')}</ul>`)
                                 .classed('hidden', false)
                                 .style('left', null)
                                 .style('top', null)
@@ -183,6 +206,8 @@ function draw(words, layout) {
                 },
                 function(exit) {
                     exit
+                        .on('mouseover', null)
+                        .on('mouseout', null)
                         .style("opacity", 1)
                         .transition()
                         .duration(300)
@@ -235,12 +260,64 @@ if (module.hot) {
 
 const reader = new FileReader();
 reader.onload = (e) => {
-    let csv = d3.csvParseRows( e.target.result );
-    let responses = csv.map(row=>row[0]);
+    const defaultColumn = 0;
 
-    // Send the text to a service worker to process
-    worker.postMessage({ responses });
+    let csv = d3.csvParseRows( e.target.result );
+
+    if(file?.type === 'text/csv') {
+        // Take the first row and populate columSelect with the column names
+        let columns = csv[0];
+        d3.select('#columnSelect')
+            .attr('disabled', null)
+            .selectAll('option')
+            .data(columns)
+            .join('option')
+                .attr('value', (d,i)=>i)
+                .text(d=>d)
+
+        // Select the first column
+        document.getElementById('columnSelect').value = defaultColumn;
+    } else {
+        // Disable the column select
+        d3.select('#columnSelect')
+            .attr('disabled', true)
+            .selectAll('option')
+            .data(['Not a CSV file'])
+            .join('option')
+                .text(d=>console.log(d)||d)
+    }
+
+    postResponses(e.target.result);
 };
+
+// Post responses to the worker
+function postResponses(inputText) {
+
+    let responses = null;
+    if(file?.type === 'text/csv') {
+        let column = document.getElementById('columnSelect').value;
+        let csv = d3.csvParseRows( inputText );
+        responses = csv.map(row=>row[column]);
+        
+        // Remove the first row (column names)
+        responses.shift(); 
+    } else {
+        responses = inputText.split('\n').filter(r=>r.length > 0);
+    }
+        
+    if(responses)
+        worker.postMessage({ responses });
+}
+
+
+// When the column select changes, process the file via wink-nlp
+const columnSelect = document.getElementById('columnSelect');
+columnSelect.onchange = (e) => {
+    if(!file || file.type !== 'text/csv') return;
+
+    postResponses(reader.result);
+}
+
 
 let file = null;
 
@@ -252,7 +329,9 @@ fileInput.onchange = (e) => {
         // Change app content to show loading message
         status.innerHTML = 'Loading...';
 
-        reader.readAsText(file);
+        if(file) {
+            reader.readAsText(file);
+        }
     }
 }
 
@@ -283,11 +362,12 @@ let drop = dropZone(document.getRootNode())
     .isallowed(e=>isText(e) || isTextFile(e))
     .ondrop(e=>{
         if(isText(e)) {
+            file = null;
+
             let text = e.dataTransfer.getData('text/plain');
-            let responses = text.split('\n').filter(r=>r.length > 0);
-            worker.postMessage({ responses });
+            postResponses(text);
         } else if(isTextFile(e)) {
-            let file = e.dataTransfer.items[0]?.getAsFile() || e.dataTransfer.files[0];
+            file = e.dataTransfer.items[0]?.getAsFile() || e.dataTransfer.files[0];
             
             reader.readAsText(file);
         }
@@ -350,5 +430,5 @@ import defaultText from './default.txt';
 fetch(defaultText)
     .then(r => r.text())
     .then(t => {
-        worker.postMessage({ responses: t.split('\n').filter(r => r.length > 0) });
+        postResponses(t);
     });
