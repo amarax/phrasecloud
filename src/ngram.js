@@ -30,11 +30,15 @@ if (module.hot) {
                 break;
             case 'apply':
                 worker = new Worker(new URL('./worker.js', import.meta.url));
+                generateResolve = (ngramList) => {
+                    onWorkerReload && onWorkerReload(ngramList);
+                }
                 worker.onmessage = onWorkerMessage;
 
                 if(textContent) {
                     worker.postMessage({responses:textContent, ...settings});
                 }
+
         }
     });
 }
@@ -145,6 +149,18 @@ let ngram = {
             });
         } else {
             return null;
+        }
+    }
+}
+
+var onWorkerReload = null;
+
+// For development purposes, add an event handler for when the worker is updated
+if(module.hot) {
+    ngram = {
+        ...ngram,
+        set onWorkerReload(callback) {
+            onWorkerReload = callback;
         }
     }
 }

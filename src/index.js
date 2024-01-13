@@ -389,3 +389,12 @@ fetch(defaultText)
     .then(t => {
         postResponses(t);
     });
+
+
+
+if(module.hot) {
+    ngram.onWorkerReload = (ngrams) => {
+        ngramList = ngrams;
+        layout(ngramList);
+    }
+}
