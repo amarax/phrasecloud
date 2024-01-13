@@ -41,6 +41,7 @@ async function onWorkerMessage(e) {
             break;
         case 'ngrams':
             let ngrams = msg.content.ngrams;
+
             updateStatus(`Drawing cloud...`);
 
             // Get the most common phrases and their responses
@@ -79,7 +80,7 @@ async function onWorkerMessage(e) {
 var cloudFont = {family:'sans-serif', weight:'bold'}; // Use this to maintain full compatibility for SVG export
 
 
-var maxPhrases = 100;
+var maxPhrases = 200;
 async function layout(ngramList) {
     // Make sure the cloudFont is loaded
     // Note that this DOES NOT work when a font is not used in the document yet
@@ -96,6 +97,7 @@ async function layout(ngramList) {
 
     function size(d) {
         return Math.sqrt(d.count/maxResponses);
+        // return d.count/maxResponses;
     }
     let maxApproxPhraseWidth = Math.max(...ngramList.map(n=>n.phrase.length*size(n)));
 
@@ -125,6 +127,8 @@ async function layout(ngramList) {
 }
 
 function draw(words, layout) {
+    console.log("Drawing words", words.length);
+
     // Remove the loading message in the SVG
     d3.select('#cloud').select('.loading')?.remove();
 
@@ -264,9 +268,8 @@ if (module.hot) {
 
 
 const reader = new FileReader();
+const defaultColumn = 0;
 reader.onload = (e) => {
-    const defaultColumn = 0;
-
     let csv = d3.csvParseRows( e.target.result );
 
     if(file?.type === 'text/csv') {
