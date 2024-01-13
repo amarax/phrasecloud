@@ -1,4 +1,4 @@
-Introducing the Phrase Cloud Generator, a revolutionary tool that transforms your text data into insightful visuals. The Phrase Cloud Generator is designed with user convenience in mind.
+Introducing the Phrase Cloud Generator, a revolutionary tool that transforms your text data into insightful visuals. The Phrase Cloud Generator is designed with user convenience in mind, and helps them with phrase cloud generation.
 With the Phrase Cloud Generator, you can simply drag and drop your documents into the interface. The Phrase Cloud Generator swiftly processes csv survey responses. It can even do regular text passages!
 The intuitive drag and drop feature of the Phrase Cloud Generator ensures that anyone can use it with ease. Once you've used drag and drop to input your files into the Phrase Cloud Generator, get ready to explore.
 When you drag & drop csv files into Phrase Cloud Generator, all processing is done locally, and it generates a phrase cloud for you.
