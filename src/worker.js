@@ -1,8 +1,6 @@
 import * as wink from 'wink-nlp';
 import * as model from 'wink-eng-lite-web-model';
 
-
-
 const nlp = wink( model );
 const its = nlp.its;
 const as = nlp.as;
@@ -42,6 +40,9 @@ function slice(tokenCollection, start, length) {
 
 
 function generateNgrams(data) {
+    // Start performance timer
+    console.time(`generateNgrams ${minNgramLength}`);
+
     // Remove repeated responses
     const dataset = [...new Set(data)];
     const responses = dataset.map(r=>nlp.readDoc(r));
@@ -73,44 +74,114 @@ function generateNgrams(data) {
     }
 
     for(let ngramLength = 6; ngramLength >= minNgramLength; ngramLength--) {
+        let newNgrams = {};
         responses.forEach((response, responseIndex) => {
             response.sentences().each( sentence => {
                 let s = sentence.tokens().filter(
                     t=>t.out(its.type) == 'word' 
                     && !t.out(its.stopWordFlag)
-                    && !usedIndices[responseIndex]?.has(t.index())
+                    && (!usedIndices[responseIndex]?.has(t.index())) // Only do this for single length ngrams
                 );
 
                 for(let i = 0; i <= s.length() - ngramLength; i++) {
                     let ngram = slice(s, i, ngramLength);
                     let k = key(ngram);
 
-                    if(!ngrams[k]) {
-                        ngrams[k] = [];
+                    if(!newNgrams[k]) {
+                        newNgrams[k] = [];
                     }
-                    ngrams[k].push({responseIndex, ngram});
+                    newNgrams[k].push({responseIndex, ngram});
                 }
             })
         });
 
         // Remove ngrams that do not repeat
-        Object.entries(ngrams).forEach(([k,v])=>{
+        Object.entries(newNgrams).forEach(([k,v])=>{
             if(v.length < 3) {
-                delete ngrams[k];
+                delete newNgrams[k];
             }
         });
 
-        // Mark indices of remaining ngrams as used
+        // Remove new ngram instances that are subsets of existing ngrams by checking their indices
+        // Generate an array of string indices for each existing ngram to test against
+        let existingNgramIndices = [];
         Object.values(ngrams).forEach(entry=>{
-            entry.forEach(({responseIndex, ngram})=>{
-                if(usedIndices[responseIndex] === undefined) {
-                    usedIndices[responseIndex] = new Set();
-                }
-
-                ngram.forEach(t=>usedIndices[responseIndex].add(t.index()));
+            entry.forEach(({responseIndex:ri, ngram:n})=>{
+                existingNgramIndices.push({responseIndex:ri , indices:n.map(t=>t.index())});
             });
         });
+
+        if(ngramLength > 1) {
+            // Check for subsets
+            Object.entries(newNgrams).forEach(([k,v])=>{
+                let ngramsToRemove = [];
+                v.forEach(({responseIndex, ngram})=>{
+                    let isSubset = false;
+                    let ngramIndices = ngram.map(t=>t.index());
+                    
+                    for(let {responseIndex:ri, indices:nIndices} of existingNgramIndices) {
+                        if(ri !== responseIndex) {
+                            continue;
+                        }
+
+                        // If the indices appear in the same sequence in the existing ngram, it's a subset
+                        for(let i = 0; i <= nIndices.length - ngramIndices.length; i++) {
+                            let isMatch = true;
+                            for(let j = 0; j < ngramIndices.length; j++) {
+                                if(ngramIndices[j] != nIndices[i + j]) {
+                                    isMatch = false;
+                                    break;
+                                }
+                            }
+                            if(isMatch) {
+                                isSubset = true;
+                                break;
+                            }
+                        }
+                    }
+                    if(isSubset) {
+                        // Remove the ngram
+                        ngramsToRemove.push(ngram);
+                    }
+                });
+                ngramsToRemove.forEach(ngram=>{
+                    newNgrams[k] = newNgrams[k].filter(({ngram:n})=>n != ngram);
+                });
+            });
+        }
+        
+
+        // Merge the new ngrams into the existing ngrams if they are statistically significant
+        Object.entries(newNgrams).forEach(([k,v])=>{
+            if(v.length < 3) return;
+
+            if(!ngrams[k]) {
+                ngrams[k] = [];
+            }
+            ngrams[k].push(...v);
+        });
+
+        // Mark indices of remaining ngrams as used so that single length ngrams don't overlap
+        if(ngramLength == 1 + 1) {
+            Object.values(ngrams).forEach(entry=>{
+                entry.forEach(({responseIndex, ngram})=>{
+                    if(usedIndices[responseIndex] === undefined) {
+                        usedIndices[responseIndex] = new Set();
+                    }
+
+                    ngram.forEach(t=>usedIndices[responseIndex].add(t.index()));
+                });
+            });
+        }
     }
+
+    // Debug: filter all ngrams by those which include the string 'lead'
+    // Object.entries(ngrams).forEach(([k,v])=>{
+    //     if(k.indexOf('lead') == -1) {
+    //         delete ngrams[k];
+    //     }
+    // });
+
 
     const tags = ['<span class="match">', '</span>'];
 
@@ -136,56 +207,32 @@ function generateNgrams(data) {
             let first = tokens.itemAt( entry.ngram[0].index() );
             let last = tokens.itemAt( entry.ngram[entry.ngram.length - 1].index() );
 
-            // If the tags already appear in the text, store the matches so we can ignore them later
-            let regex = new RegExp(tags[0] + '(.*?)' + tags[1], 'g');
-            let markupBefore = doc.out(its.markedUpText);
-            let matchesBefore = markupBefore.matchAll(regex);
-
             if(entry.ngram.length == 1) {
                 first.markup(tags[0],tags[1]);
             } else {
                 first.markup(tags[0],'');
                 last.markup('',tags[1]);
             }
-
-            let markupAfter = doc.out(its.markedUpText);
-            let matchesAfter = markupAfter.matchAll(regex);
-
-            // Find the first match that has a different starting index
-            let mb = [...matchesBefore].sort((a,b)=>a.index - b.index);
-            let ma = [...matchesAfter].sort((a,b)=>a.index - b.index);
-            let match = null;
-            for(let i = 0; i < ma.length; i++) {
-                if(i >= mb.length || mb[i].index != ma[i].index) {
-                    match = ma[i];
-                    break;
-                }
-            }
-
-            // Log to console if there are zero matches
-            if(!match) {
-                console.error('Could not find new match.', entry.ngram.map(t=>t.out()).join(' '));
-                console.error('Before:', markupBefore);
-                console.error('After:', markupAfter);
-            }
-            
-            // Extract the phrase from the capture group
-            let phrase = match[1];
-
-            return {
-                phrase,
-            };
         });
 
-        // Find the most common phrase
-        let phrases = {};
-        ngrams[k].forEach(ngram=>{
-            if(!phrases[ngram.phrase]) {
-                phrases[ngram.phrase] = 0;
+        // Find the most common phrase by looking for regex matches in the duplicated documents
+        // Build the regex match from the tags
+        let regex = new RegExp(`${tags[0]}(.*?)${tags[1]}`, 'g');
+        let phrases = {}
+        documentMap.forEach(doc=>{
+            let matches = doc.out(its.markedUpText).match(regex);
+            if(matches) {
+                matches.forEach(m=>{
+                    let phrase = m.substring(tags[0].length, m.length - tags[1].length);
+                    if(!phrases[phrase]) {
+                        phrases[phrase] = 0;
+                    }
+                    phrases[phrase]++;
+                });
             }
-            phrases[ngram.phrase]++;
         });
-        let commonPhrase = Object.entries(phrases).reduce((a,b)=>a[1] > b[1] ? a : b)[0];
+        
+        let commonPhrase = Object.entries(phrases).sort((a,b)=>b[1]-a[1])[0][0];
 
         ngrams[k] = {
             commonPhrase,
@@ -195,6 +242,10 @@ function generateNgrams(data) {
             }))
         }
     });
+
+    // End performance timer
+    console.timeEnd(`generateNgrams ${minNgramLength}`);
+
 
     self.postMessage({type:'ngrams', content:{ngrams}});
 }

@@ -253,6 +253,11 @@ if (module.hot) {
             case 'apply':
                 worker = new Worker(new URL('./worker.js', import.meta.url));
                 worker.onmessage = onWorkerMessage;
+
+                // If the reader already has a file, post it to the worker
+                if(reader.result) {
+                    postResponses(reader.result);
+                }
         }
     });
 }
