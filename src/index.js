@@ -389,7 +389,7 @@ const ngramLengthDisplay = document.getElementById('ngramLengthDisplay');
 
 async function updateNgramLength(e) {
     ngramLengthDisplay.textContent = e.target.value;
-    ngramList = await ngram.updateSettings({ minNgramLength: e.target.value });
+    ngramList = await ngram.applySettings({ minNgramLength: e.target.value });
 
     if(ngramList)
         await layout(ngramList);

@@ -121,6 +121,8 @@ var ngram = {
     set onStatusUpdate(callback) {
         updateStatus = callback;
         worker.onmessage = onWorkerMessage;
+
+        return ngram;
     },
 
     /**
@@ -138,7 +140,7 @@ var ngram = {
         });
     },
 
-    updateSettings: async (newSettings) => {
+    applySettings: async (newSettings) => {
         settings = {...settings, ...newSettings};
 
         if(textContent) {
@@ -168,6 +170,8 @@ if(module.hot) {
     Object.defineProperty(ngram, 'onWorkerReload', {
         set: (callback) => {
             onWorkerReload = callback;
+
+            return ngram;
         }
     });
 }
