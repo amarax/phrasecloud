@@ -85,6 +85,7 @@ function generateNgrams(data) {
                 let s = sentence.tokens().filter(
                     t=>t.out(its.type) == 'word' 
                     && !t.out(its.stopWordFlag)
+                    && t.out(its.pos) != 'PART'    // Remove particles
                     && (!usedIndices[responseIndex]?.has(t.index())) // Only do this for single length ngrams
                 );
 
