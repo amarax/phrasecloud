@@ -3,7 +3,6 @@
  * @typedef {import('./worker.js').ngrams} ngrams
  */
 
-import { text } from 'd3';
 
 /**
  * Worker Message Event Object

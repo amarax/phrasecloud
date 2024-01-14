@@ -1,6 +1,16 @@
 # Phrase Cloud App
 
-This is a static HTML web app that generates a Phrase Cloud from a text file. All processing is done locally.
+This is a static HTML web app that generates a Phrase Cloud from some text.
+
+
+## Features
+
+- Supports plain text: each paragraph is treated as an individual block.
+- Supports CSV files: each cell is treated as an individual block, and you can select which column to generate a cloud from.
+- Export to SVG: only works well for generic font families, e.g. 'sans-serif'.
+- Drag and drop or paste directly: works for both text and files.
+
+
 
 ## Prerequisites
 
@@ -20,7 +30,7 @@ To start the development server, run:
 ```bash
 npm start
 ```
-This will start the webpack dev server at https://localhost:8080. The server supports hot module replacement and will watch your HTML files for changes.
+This will start the webpack dev server at https://localhost:8080. The server supports hot module replacement, and has been configured to work with the worker as well.
 
 To create a production build, run:
 ```bash

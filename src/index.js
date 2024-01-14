@@ -3,7 +3,7 @@ import cloud from 'd3-cloud';
 
 import './styles.css';
 
-import ngram from './ngram.js';
+import ngram from './ngram/ngram.js';
 
 const status = document.getElementById('status');
 
@@ -460,15 +460,11 @@ if(module.hot) {
 
 // Handle pasting text or files into the app
 document.addEventListener('paste', async (e)=>{
-    if(e.clipboardData.types.includes('text/plain')) {
-        // Get the text from the clipboard
-        let text = e.clipboardData.getData('text/plain');
+    console.log(e.clipboardData.types.includes('text/html'))
+    console.log(e.clipboardData.getData('text/html'))
 
-        // Post the responses
-        postResponses(text);
 
-        displayCloudMessage('Processing text...');
-    } else if(e.clipboardData.types.includes('Files')) {
+    if(e.clipboardData.types.includes('Files')) {
         // Get the file from the clipboard
         let f = e.clipboardData.items[0]?.getAsFile() || e.clipboardData.files[0];
         
@@ -478,5 +474,13 @@ document.addEventListener('paste', async (e)=>{
             file = f;
             loadFile(file);
         }
+    } else if(e.clipboardData.types.includes('text/plain')) {
+        // Get the text from the clipboard
+        let text = e.clipboardData.getData('text/plain');
+
+        // Post the responses
+        postResponses(text);
+
+        displayCloudMessage('Processing text...');
     }
 });
