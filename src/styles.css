@@ -52,13 +52,13 @@ select#columnSelect {
 
 #responses ul {
     padding: 0 0;
-    margin: 8px 0;
+    margin: 16px 0;
 }
 
 #responses li {
     list-style-type: none;
     padding: 0 0;
-    margin: 0 0 8px 0;
+    margin: 0 0 16px 0;
 }
 
 #responses li span.match {

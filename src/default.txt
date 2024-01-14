@@ -1,11 +1,23 @@
-Introducing the Phrase Cloud Generator, a revolutionary tool that transforms your text data into insightful visuals. The Phrase Cloud Generator is designed with user convenience in mind, and helps them with phrase cloud generation.
-With the Phrase Cloud Generator, you can simply drag and drop your documents into the interface. The Phrase Cloud Generator swiftly processes csv survey responses. It can even do regular text passages!
-The intuitive drag and drop feature of the Phrase Cloud Generator ensures that anyone can use it with ease. Once you've used drag and drop to input your files into the Phrase Cloud Generator, get ready to explore.
-When you drag & drop csv files into Phrase Cloud Generator, all processing is done locally, and it generates a phrase cloud for you.
-In the Phrase Cloud Generator, you can click on words or phrases to reveal detailed insights about their usage and context. The Phrase Cloud Generator's ability to handle csv survey responses makes it incredibly versatile.
-Use the drag and drop feature to upload any text passage, and watch as the Phrase Cloud Generator transforms it into a visually appealing cloud.
-The Phrase Cloud Generator is not just about visual flair; its drag and drop functionality is complemented by robust analytical capabilities.
-When you click on words or phrases, the Phrase Cloud Generator displays frequency, context, and trends in your csv survey responses or any text passages.
-All processing is done locally, ensuring your data's privacy.
-Additionally, the Phrase Cloud Generator allows you to click on words or phrases to uncover patterns that might not be immediately apparent.
-Conclusively, the Phrase Cloud Generator stands out for its drag and drop simplicity, the insightful results when you click on words or phrases, and its ability to process csv survey responses and text passages privately, since all processing is done locally.
+Phrase Cloud Generator
+
+This is a Phrase Cloud Generator, a simple web app for transforming text passages and CSV survey responses into a more visual form for presentation and analysis. It creates an interactive phrase cloud, generated from text you provide.
+
+The phrase cloud generation locally processes both text passages (treating each paragraph as an individual block) and CSV survey responses (where you can select a column to view as a cloud, and each cell is regarded as a separate block or response).
+
+For CSV survey responses, the Phrase Cloud Generator allows you to select a column, and it will create a phrase cloud with only responses in that selected column. 
+
+With the Phrase Cloud Generator, drag & drop or copy & paste your .txt or .csv documents into the web app. The drag and drop feature is ideal for quickly uploading csv files or text passages. 
+
+The Phrase Cloud Generator swiftly generates an visualualisation where you can click on words and phrases to see where it occurs in the original document, all locally processed for privacy.
+
+The Phrase Cloud Generator's interface is user-friendly. Once you drag and drop your files, or copy and paste text passages, you can click on words or phrases to see where they are mentioned. 
+
+This functionality of the phrase cloud generator extends to both text passages and csv survey responses, with an option to select a column in for tabluated data.
+
+In addition, the Phrase Cloud Generator allows exporting to SVG image or PNG images (coming soon).
+
+For the phrase cloud generator, if you export to SVG, using a generic font will preserve its appearance more accurately when you use it in other applications.
+
+In summary, the Phrase Cloud Generator stands out for its drag and drop ease, direct copy and pasting functionality, and the insights gained when you click on words or phrases. The Phrase Cloud generating ability handles diverse formats like plain text and csv survey responses, and along with the locally processed data and export to SVG, makes it a comprehensive tool for phrase cloud generation.
+
+If you like the Phrase Cloud generator, you can visit the GitHub repository.
