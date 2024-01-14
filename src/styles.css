@@ -136,3 +136,12 @@ body {
 
     background-color: #f8f8f8;
 }
+
+.collapsible .expandedContent {
+    max-height: 0px;
+    overflow: hidden;
+}
+
+.collapsible.expanded .expandedContent {
+    max-height: none;
+}

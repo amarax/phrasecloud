@@ -148,27 +148,25 @@ const hueOffsetSlider = document.getElementById('hueOffset');
 const chromaSlider = document.getElementById('chroma');
 const lightnessSlider = document.getElementById('lightness');
 
-hueRangeSlider.oninput = function() {
-    dataColors.setHueRange(parseFloat(this.value));
-}
+const updateDataColors = () => {
+    const hueRange = parseFloat(hueRangeSlider.value);
+    const hueOffset = parseFloat(hueOffsetSlider.value);
+    const chroma = parseFloat(chromaSlider.value);
+    const lightness =parseFloat(lightnessSlider.value);
 
-hueOffsetSlider.oninput = function() {
-    dataColors.setHueOffset(parseFloat(this.value));
-}
+    // Update data colors with the modified lightness value
+    dataColors.setHueRange(hueRange);
+    dataColors.setHueOffset(hueOffset);
+    dataColors.setChroma(chroma);
+    dataColors.setLightness(lightness);
+};
 
-chromaSlider.oninput = function() {
-    dataColors.setChroma(parseFloat(this.value));
-}
+hueRangeSlider.oninput = updateDataColors;
+hueOffsetSlider.oninput = updateDataColors;
+chromaSlider.oninput = updateDataColors;
+lightnessSlider.oninput = updateDataColors;
 
-lightnessSlider.oninput = function() {
-    dataColors.setLightness(parseFloat(this.value));
-}
-
-// Initialize dataColors
-dataColors.setHueRange(parseFloat(hueRangeSlider.value));
-dataColors.setHueOffset(parseFloat(hueOffsetSlider.value));
-dataColors.setChroma(parseFloat(chromaSlider.value));
-dataColors.setLightness(parseFloat(lightnessSlider.value));
+updateDataColors();
 
 
 
