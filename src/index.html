@@ -42,5 +42,19 @@
     <div id="responses" class="hidden" style="top: 0; left: 0;"></div>
 
     <div class="dropZoneBox hidden"><div class="outline">Drop text or CSV files here</div></div>
+
+    <div id="floatingWindow" style="position: fixed; bottom: 20px; right: 20px; background-color: white; padding: 10px; border: 1px solid black;">
+        <label for="hueRange">Hue Range:</label>
+        <input type="range" id="hueRange" name="hueRange" min="1" max="360" value="1" step="0.1"><br>
+
+        <label for="hueOffset">Hue Offset:</label>
+        <input type="range" id="hueOffset" name="hueOffset" min="0" max="360" value="180" step="0.1"><br>
+
+        <label for="chroma">Chroma:</label>
+        <input type="range" id="chroma" name="chroma" min="0" max="0.6" value="0.2" step="0.001"><br>
+
+        <label for="lightness">Lightness:</label>
+        <input type="range" id="lightness" name="lightness" min="0" max="100" value="50" step="0.1"><br>
+    </div>
 </body>
 </html>

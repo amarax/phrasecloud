@@ -79,6 +79,99 @@ async function layout(ngrams) {
     layout.start();
 }
 
+
+function createDataColors() {
+    let hueRange = 90;
+    let hueOffset = 0;
+    let chroma = 0.4;
+    let lightness = 30;
+
+    function color(d) {
+        if(!d?.key) return null;
+
+        // Generate a random colour that's based on the text as a seed
+        // Use the LCH model so that colours are perceptually similar in brightness
+        let seed = d.key.split('').reduce((a,b)=>a+b.charCodeAt(0), 0) / Math.PI;
+
+        let hue = seed % hueRange + hueOffset + 0.5*hueRange;
+
+        // Check if the device is wide color gamut
+        if(window.matchMedia('(color-gamut: p3)').matches) {
+            return `oklch(${lightness}% ${chroma} ${hue})`;
+        }
+
+        // Otherwise, use sRGB
+        return d3.hcl(hue, chroma, lightness);
+    }
+
+    function redrawColorsOnly() {
+        d3.select('#cloud')
+            .select('g')
+            .selectAll('text')
+            .attr('fill', color);
+    }
+
+    function setHueRange(value) {
+        hueRange = value;
+        redrawColorsOnly();
+    }
+
+    function setHueOffset(value) {
+        hueOffset = value;
+        redrawColorsOnly();
+    }
+
+    function setChroma(value) {
+        chroma = value;
+        redrawColorsOnly();
+    }
+
+    function setLightness(value) {
+        lightness = value;
+        redrawColorsOnly();
+    }
+
+    return {
+        setHueRange,
+        setHueOffset,
+        setChroma,
+        setLightness,
+        redrawColorsOnly,
+    };
+}
+
+const dataColors = createDataColors();
+
+// Update dataColors when sliders change
+const hueRangeSlider = document.getElementById('hueRange');
+const hueOffsetSlider = document.getElementById('hueOffset');
+const chromaSlider = document.getElementById('chroma');
+const lightnessSlider = document.getElementById('lightness');
+
+hueRangeSlider.oninput = function() {
+    dataColors.setHueRange(parseFloat(this.value));
+}
+
+hueOffsetSlider.oninput = function() {
+    dataColors.setHueOffset(parseFloat(this.value));
+}
+
+chromaSlider.oninput = function() {
+    dataColors.setChroma(parseFloat(this.value));
+}
+
+lightnessSlider.oninput = function() {
+    dataColors.setLightness(parseFloat(this.value));
+}
+
+// Initialize dataColors
+dataColors.setHueRange(parseFloat(hueRangeSlider.value));
+dataColors.setHueOffset(parseFloat(hueOffsetSlider.value));
+dataColors.setChroma(parseFloat(chromaSlider.value));
+dataColors.setLightness(parseFloat(lightnessSlider.value));
+
+
+
 function draw(words, layout) {
     console.log("Drawing words", words.length);
 
@@ -173,6 +266,8 @@ function draw(words, layout) {
                 }
             )
 
+
+    dataColors.redrawColorsOnly();
 }
 
 
@@ -398,9 +493,8 @@ async function updateNgramLength(e) {
 ngramLengthSlider.oninput = updateNgramLength;
 updateNgramLength({target:ngramLengthSlider});
 
-
+import chroma from "chroma-js"
 const downloadButton = document.getElementById('download');
-
 downloadButton.onclick = function() {
     const svg = document.getElementById('cloud');
     const serializer = new XMLSerializer();
@@ -415,6 +509,15 @@ downloadButton.onclick = function() {
     const heightReplace = `<svg$1height="${Math.ceil(height)}px"`;
     source = source.replace(widthRegex, widthReplace);
     source = source.replace(heightRegex, heightReplace);
+
+
+    // Convert all oklch colours to RGB using chroma.js
+    const colorRegex = /oklch\(([\s\S]+?)% ([\s\S]+?) ([\s\S]+?)\)/g;
+    source = source.replace(colorRegex, (match, l, c, h)=>{
+        let rgb = chroma.oklch(l/100, c, h).rgb();
+        console.log(rgb);
+        return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+    });
 
 
     // Include the font in the SVG
@@ -484,3 +587,4 @@ document.addEventListener('paste', async (e)=>{
         displayCloudMessage('Processing text...');
     }
 });
+
