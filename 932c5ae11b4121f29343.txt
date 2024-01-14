@@ -1,0 +1,23 @@
+Phrase Cloud Generator
+
+This is a Phrase Cloud Generator, a simple web app for transforming text passages and CSV survey responses into a more visual form for presentation and analysis. It creates an interactive phrase cloud, generated from text you provide.
+
+The phrase cloud generation locally processes both text passages (treating each paragraph as an individual block) and CSV survey responses (where you can select a column to view as a cloud, and each cell is regarded as a separate block or response).
+
+For CSV survey responses, the Phrase Cloud Generator allows you to select a column, and it will create a phrase cloud with only responses in that selected column. 
+
+With the Phrase Cloud Generator, drag & drop or copy & paste your .txt or .csv documents into the web app. The drag and drop feature is ideal for quickly uploading csv files or text passages. 
+
+The Phrase Cloud Generator swiftly generates an visualualisation where you can click on words and phrases to see where it occurs in the original document, all locally processed for privacy.
+
+The Phrase Cloud Generator's interface is user-friendly. Once you drag and drop your files, or copy and paste text passages, you can click on words or phrases to see where they are mentioned. 
+
+This functionality of the phrase cloud generator extends to both text passages and csv survey responses, with an option to select a column in for tabluated data.
+
+In addition, the Phrase Cloud Generator allows exporting to SVG image or PNG images (coming soon).
+
+For the phrase cloud generator, if you export to SVG, using a generic font will preserve its appearance more accurately when you use it in other applications.
+
+In summary, the Phrase Cloud Generator stands out for its drag and drop ease, direct copy and pasting functionality, and the insights gained when you click on words or phrases. The Phrase Cloud generating ability handles diverse formats like plain text and csv survey responses, and along with the locally processed data and export to SVG, makes it a comprehensive tool for phrase cloud generation.
+
+If you like the Phrase Cloud generator, you can visit the GitHub repository.
