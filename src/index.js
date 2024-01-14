@@ -455,3 +455,28 @@ if(module.hot) {
         layout(ngramList);
     }
 }
+
+
+
+// Handle pasting text or files into the app
+document.addEventListener('paste', async (e)=>{
+    if(e.clipboardData.types.includes('text/plain')) {
+        // Get the text from the clipboard
+        let text = e.clipboardData.getData('text/plain');
+
+        // Post the responses
+        postResponses(text);
+
+        displayCloudMessage('Processing text...');
+    } else if(e.clipboardData.types.includes('Files')) {
+        // Get the file from the clipboard
+        let f = e.clipboardData.items[0]?.getAsFile() || e.clipboardData.files[0];
+        
+        // Only if the file is text or csv
+        if(f.type === 'text/plain' || f.type === 'text/csv') {
+            // Load the file
+            file = f;
+            loadFile(file);
+        }
+    }
+});
