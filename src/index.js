@@ -191,10 +191,10 @@ function draw(words, layout) {
                     enter.append("text")
                         .attr("data-key", d=>d.key)
                         .style("font-size", function(d) { return d.size + "px"; })
-                        .attr("text-anchor", "middle")
-                        .attr("transform", function(d) {
-                            return "translate(" + [d.x, d.y] + ")";
+                        .style("transform", function(d) {
+                            return `translate(${d.x}px, ${d.y}px)`
                         })
+                        .attr("text-anchor", "middle")
                         .text(function(d) { return d.text; })
                         .on('mouseover', function(e, d) {
                             // Only do this if the transition is completed
@@ -247,8 +247,8 @@ function draw(words, layout) {
                 },
                 function(update) {
                     update.text(d=>d.text)
-                        .attr("transform", function(d) {
-                            return "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")";
+                        .style("transform", function(d) {
+                            return `translate(${d.x}px, ${d.y}px)`;
                         })
                         .style("font-size", function(d) { return d.size + "px"; })
                 },

@@ -68,7 +68,7 @@ select#columnSelect {
 #cloud text {
     cursor: pointer;
     transition: font-size 0.5s ease, transform 0.5s ease;
-
+    -webkit-transition: font-size 0.5s ease, -webkit-transform 0.5s ease;
 }
 
 #cloud text:hover {
@@ -144,4 +144,6 @@ body {
 
 .collapsible.expanded .expandedContent {
     max-height: none;
+
+    margin-block-end: 8px;
 }
