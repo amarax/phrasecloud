@@ -561,10 +561,6 @@ if(module.hot) {
 
 // Handle pasting text or files into the app
 document.addEventListener('paste', async (e)=>{
-    console.log(e.clipboardData.types.includes('text/html'))
-    console.log(e.clipboardData.getData('text/html'))
-
-
     if(e.clipboardData.types.includes('Files')) {
         // Get the file from the clipboard
         let f = e.clipboardData.items[0]?.getAsFile() || e.clipboardData.files[0];
