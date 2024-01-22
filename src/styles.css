@@ -25,31 +25,6 @@ select#columnSelect {
     white-space: nowrap;
 }
 
-#responses {
-    width: min(400px, 50vw);
-    position: absolute;
-    background-color: white;
-    z-index: 10;
-
-    max-height: min(400px, 40vh);
-    overflow-y: scroll; 
-    
-
-    padding: 8px 16px;
-    box-shadow: 0px 5px 15px 0px rgba(0,0,0,0.3);
-    border-radius: 8px;
-
-}
-
-@media (hover: hover) {
-    #responses {
-        pointer-events: none;
-        overflow-y: hidden;
-    }
-    
-}
-
-
 #responses ul {
     padding: 0 0;
     margin: 16px 0;
@@ -58,17 +33,30 @@ select#columnSelect {
 #responses li {
     list-style-type: none;
     padding: 0 0;
-    margin: 0 0 16px 0;
+    margin: 8px 16px;
+
+    background-color: white;
+
+    padding: 8px 12px;
+    box-shadow: 0px 2px 4px 0px rgba(0,0,0,0.3);
+    border-radius: 8px;
+
 }
 
 #responses li span.match {
     background-color: #ffcc00;
+
+    cursor: grab;
 }
 
 #cloud text {
     cursor: pointer;
     transition: font-size 0.5s ease, transform 0.5s ease;
     -webkit-transition: font-size 0.5s ease, -webkit-transform 0.5s ease;
+}
+
+#cloud text.selected {
+    text-decoration: underline;
 }
 
 #cloud text:hover {
@@ -129,8 +117,6 @@ select#columnSelect {
 }
 
 body {
-    overflow: hidden;
-
     font-family: 'Quicksand', sans-serif;
     font-weight: 400;
 
@@ -146,4 +132,80 @@ body {
     max-height: none;
 
     margin-block-end: 8px;
+
+    overflow: initial;
+}
+
+
+.contentWithSidePanel {
+    flex: 1;
+    height: 100%;
+
+    display: flex;
+    position: relative;
+}
+
+.contentWithSidePanel > .content {
+    /* Other styles */
+    flex: 1; /* Adjust as needed */
+}
+
+.contentWithSidePanel > .sidePanel {
+    width: 300px;
+    max-width: 30px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.sidePanel #responses {
+    overflow-y: auto;
+    height: 100%;
+    width: 100%;
+
+    flex: 1;
+}
+
+.contentWithSidePanel > .sidePanel.expanded {
+    max-width: initial;
+}
+
+@media (max-width: 600px) {
+    .contentWithSidePanel > .sidePanel {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1;
+
+        background-color: #f8f8f8;
+
+        width: 50vw;
+
+        box-shadow: 0px 5px 15px 0px rgba(0,0,0,0.3);
+    }
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+
+    height: 100dvh;
+    margin: 0;
+    padding: 8px;
+    box-sizing: border-box;
+}
+
+body > .header {
+    flex: 0 0 auto;
+}
+
+body > .content {
+    flex: 1; /* Adjusted to fill up remaining space */
+    height: 100%;
+    overflow: hidden;
+
+    display:flex;
+    flex-direction: column;    
 }

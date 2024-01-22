@@ -19,12 +19,58 @@ function updateStatus(message, s) {
 var ngramList = null;
 var stats = {}
 
+var ngramSelection = {
+    _selected: null,
+    get selected() {
+        return this._selected;
+    },
+    set selected(value) {
+        this._selected = value;
+
+        // Apply the selected class to the text element
+        d3.select('#cloud')
+            .select('g')
+            .selectAll('text')
+            .classed('selected', d=>d?.key === value);
+
+        if(value) {
+            // Get the ngram from the ngramList
+            let ngram = ngramList.find(n=>n.ngram === value);
+
+            // Sanitise the markup, with the exception of the <span> tags
+            function sanitise(markup) {
+                return markup.replace(/<[^>]+>/g, m=>m.includes('span')?m:'');
+            }
+
+            // Get responses for this ngram
+            let responses = ngram.responses?.map(r=>`<li>${sanitise(r.markup)}</li>`) || [];
+
+            d3.select('#responses')
+                .html(`Count: ${ngram.count}<br /><ul>${responses?.join('')}</ul>`)
+
+            // Scroll to top of responses
+            document.getElementById('responses').scrollTop = 0;
+
+
+            // If the side panel is hidden, show it
+            if(!document.getElementById('responses').parentElement.classList.contains('expanded')) {
+                document.getElementById('responses').parentElement.classList.add('expanded');
+            }
+        } else {
+            d3.select('#responses')
+                .html(``)
+        }
+    }
+}
+
 // var cloudFont = {family:'Manrope', weight:'800'};
 var cloudFont = {family:'sans-serif', weight:'bold'}; // Use this to maintain full compatibility for SVG export
 
 
 var maxPhrases = 100;
 async function layout(ngrams) {
+    if(!ngrams) return;
+
     // If ngrams is empty, display a message
     if(ngrams.length === 0) {
         displayCloudMessage('No repeating phrases found.');
@@ -176,9 +222,6 @@ function draw(words, layout) {
     // Remove the loading message in the SVG
     d3.select('#cloud').select('.loading')?.remove();
 
-    // Hide the responses box
-    d3.select('#responses').classed('hidden', true);
-
     d3.select("#cloud")
         .select("g")
             .attr("transform", "translate(" + layout.size()[0] / 2 + "," + layout.size()[1] / 2 + ")")
@@ -196,48 +239,8 @@ function draw(words, layout) {
                         })
                         .attr("text-anchor", "middle")
                         .text(function(d) { return d.text; })
-                        .on('mouseover', function(e, d) {
-                            // Only do this if the transition is completed
-                            if(d3.select(this).style('opacity') < 1) return;
-
-                            // Get responses for this ngram
-                            let responses = d.responses?.map(r=>`<li>${r.markup}</li>`) || [];
-                
-                            let rect = d3.select(this).node().getBoundingClientRect();
-                            let pos = [rect.x, rect.y+rect.height]
-                            let posAnchors = ['left','top'];
-
-                            let responsesWidth = document.getElementById('responses').computedStyleMap().get('width').value;
-                            let responsesMaxHeight = document.getElementById('responses').computedStyleMap().get('max-height').value;
-
-                            // Nudge the box to the left if it's too close to the right edge
-                            let margin = 32;
-                            if(pos[0] + responsesWidth + margin > window.innerWidth) {
-                                pos[0] = window.innerWidth - rect.x - rect.width;
-                                posAnchors[0] = 'right';
-                            }
-
-                            // Place the box above the text if it's too close to the bottom edge
-                            if(pos[1] + responsesMaxHeight + margin > window.innerHeight) {
-                                pos[1] = window.innerHeight - rect.y;
-                                posAnchors[1] = 'bottom';
-                            }
-
-                            d3.select('#responses')
-                                .html(`Count: ${d.count}<br /><ul>${responses?.join('')}</ul>`)
-                                .classed('hidden', false)
-                                .style('left', null)
-                                .style('top', null)
-                                .style('right', null)
-                                .style('bottom', null)
-                                .style(posAnchors[1], `${pos[1]}px`)
-                                .style(posAnchors[0], `${pos[0]}px`)
-
-                            // Scroll to top of responses
-                            document.getElementById('responses').scrollTop = 0;
-                        })
-                        .on('mouseout', function(d) {
-                            d3.select('#responses').classed('hidden', true);
+                        .on('mousedown', function(e, d) {
+                            ngramSelection.selected = d.key;
                         })
 
                         .style("opacity", 0)
@@ -268,25 +271,28 @@ function draw(words, layout) {
     dataColors.redrawColorsOnly();
 }
 
-
-// When clicking outside the SVG, hide the responses box
-document.addEventListener('click', (e)=>{
-    // If the ancestor of the clicked element is the SVG or the responses box, don't hide the responses
-    if(!e.composedPath().includes(document.getElementById('cloud')) && !e.composedPath().includes(document.getElementById('responses')))
-    {
-        d3.select('#responses').classed('hidden', true);
+// Clicking an empty space in the SVG deselects the ngram
+document.getElementById('cloud').onclick = (e) => {
+    if(e.target === document.getElementById('cloud')) {
+        ngramSelection.selected = null;
     }
-});
+}
 
 
 // When the viewport resizes, resize the cloud a short time after the last resize event 
 // to ensure the cloud is sized correctly and doesn't jump around while resizing
-window.onresize = function(event) {
-    clearTimeout(window.resizeTimer);
-    window.resizeTimer = setTimeout(function() {
-        layout(ngramList);
-    }, 100);
-}
+const cloudElement = document.querySelector('svg#cloud');
+
+const resizeObserver = new ResizeObserver((entries) => {
+    for (let entry of entries) {
+        clearTimeout(window.resizeTimer);
+        window.resizeTimer = setTimeout(() => {
+            layout(ngramList);
+        }, 100);
+    }
+});
+
+resizeObserver.observe(cloudElement);
 
 const reader = new FileReader();
 const defaultColumn = 0;
@@ -421,8 +427,8 @@ function isTextFile(e) {
 
 
 function displayCloudMessage(message) {
-    // Hide the responses box
-    d3.select('#responses').classed('hidden', true);
+    // Reset selection
+    ngramSelection.selected = null;
 
     // Replace the cloud with a loading message
     d3.select('#cloud')
