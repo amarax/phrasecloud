@@ -39,7 +39,9 @@ var ngramSelection = {
 
             // Sanitise the markup, with the exception of the <span> tags
             function sanitise(markup) {
-                return markup.replace(/<[^>]+>/g, m=>m.includes('span')?m:'');
+                // Replace all < and > with &lt; and &gt; unless they are part of an exception match
+                return markup.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                    .replace(/&lt;span class="match"&gt;(.*?)&lt;\/span&gt;/g, m=>m.replace(/&lt;span class="match"&gt;/g, '<span class="match">').replace(/&lt;\/span&gt;/g, '</span>'));
             }
 
             // Get responses for this ngram
