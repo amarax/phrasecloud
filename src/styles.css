@@ -46,7 +46,7 @@ select#columnSelect {
 #responses li span.match {
     background-color: #ffcc00;
 
-    cursor: grab;
+    /* cursor: grab; */
 }
 
 #cloud text {
