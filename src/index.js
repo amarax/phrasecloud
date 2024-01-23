@@ -500,7 +500,6 @@ downloadButton.onclick = function() {
     const colorRegex = /oklch\(([\s\S]+?)% ([\s\S]+?) ([\s\S]+?)\)/g;
     source = source.replace(colorRegex, (match, l, c, h)=>{
         let rgb = chroma.oklch(l/100, c, h).rgb();
-        console.log(rgb);
         return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
     });
 
