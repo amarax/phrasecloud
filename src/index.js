@@ -379,7 +379,7 @@ dataSource.addEventListener('change', async (source) => {
         }
 
         if(ngramList.length === 0) {
-            displayCloudMessage('No repeating phrases found in this file.');
+            displayCloudMessage('No repeating phrases found in the data.');
         } else {
             await layout(ngramList);
         }
@@ -392,7 +392,12 @@ const columnSelect = document.getElementById('columnSelect');
 columnSelect.onchange = async (e) => {
     let columnIndex = parseInt(e.target.value);
     ngramList = await ngram.generateNgramList(dataSource.source.data.map((row)=>row[columnIndex]));
-    await layout(ngramList);
+    
+    if(ngramList.length === 0) {
+        displayCloudMessage('No repeating phrases found.');
+    } else {
+        await layout(ngramList);
+    }
 }
 
 
