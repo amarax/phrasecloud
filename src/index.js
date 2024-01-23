@@ -306,19 +306,70 @@ const defaultTableColumnIndex = 0;
 
 var columnHeaders = null;
 function updateColumnHeaders(headers) {
-    d3.select('#columnSelect')
-    .attr('disabled', headers == null ? true : null)
-    .selectAll('option')
-    .data(headers || ['Not a table'])
-    .join('option')
-        .attr('value', headers ? (d,i)=>i : null)
-        .text(d=>d)
+    let disabled = headers == null ? true : null;
+
+    d3.select(columnSelectionElements.select)
+        .attr('disabled', disabled)
+        .selectAll('option')
+        .data(headers || ['Not a table'])
+        .join('option')
+            .attr('value', headers ? (d,i)=>i : null)
+            .text(d=>d)
+
+    columnSelectionElements.prev.disabled = disabled;
+    columnSelectionElements.next.disabled = disabled;
 
     if(headers)
-        document.getElementById('columnSelect').value = defaultTableColumnIndex;
+        columnSelectionElements.select.value = defaultTableColumnIndex;
 }
 
-var columnIndex = defaultTableColumnIndex
+var _columnIndex = defaultTableColumnIndex
+
+var dataSourceSettings = {
+    set columnIndex(value) {
+        _columnIndex = Math.max(0, Math.min(value, columnHeaders.length - 1));
+        
+        ngram.generateNgramList(dataSource.source.data.map((row)=>row[_columnIndex]))
+            .then((ngrams)=>{
+                if(ngrams.length === 0) {
+                    displayCloudMessage('No repeating phrases found.');
+                } else {
+                    layout(ngrams);
+                }
+            });
+
+        if(columnSelectionElements.select.value != _columnIndex)
+            columnSelectionElements.select.value = _columnIndex;
+    },
+    get columnIndex() {
+        return _columnIndex;
+    }
+
+
+}
+
+
+const columnSelectionElements = {
+    select: document.getElementById('columnSelect'),
+    prev: document.getElementById('prevColumn'),
+    next: document.getElementById('nextColumn'),
+}
+
+columnSelectionElements.select.onchange = async (e) => {
+    dataSourceSettings.columnIndex = parseInt(e.target.value);
+}
+
+// Increment and decrement column index
+columnSelectionElements.prev.onclick = (e) => {
+    dataSourceSettings.columnIndex--;
+}
+columnSelectionElements.next.onclick = (e) => {
+    dataSourceSettings.columnIndex++;
+}
+
+
+
+
 async function loadTableData(source) {
     let tableData = source.data;
 
@@ -329,10 +380,11 @@ async function loadTableData(source) {
     let responses = null;
     for(let i = 0; i < columnHeaders.length; i++) {
         let data = tableData.map((row) => row[i]);
-        let ngrams = await ngram.generateNgramList(data);
+        let ngrams = await ngram.generateNgramList(data)
+        ngrams = ngrams.filter(n=>n.ngram.trim().length > 0);
         if(ngrams.length > 0) {
             responses = data;
-            columnIndex = i;
+            _columnIndex = i;
 
             break;
         }
@@ -340,10 +392,10 @@ async function loadTableData(source) {
     
     // If there are no ngrams, use the first column
     if(!responses) {
-        columnIndex = defaultTableColumnIndex;
+        _columnIndex = defaultTableColumnIndex;
     }
 
-    document.getElementById('columnSelect').value = columnIndex;
+    document.getElementById('columnSelect').value = dataSourceSettings.columnIndex;
 }
 
 dataSource.addEventListener('change', async (source) => {
@@ -383,20 +435,6 @@ dataSource.addEventListener('change', async (source) => {
         }
     }
 });
-
-
-// When the column select changes, process the file via wink-nlp
-const columnSelect = document.getElementById('columnSelect');
-columnSelect.onchange = async (e) => {
-    let columnIndex = parseInt(e.target.value);
-    await ngram.generateNgramList(dataSource.source.data.map((row)=>row[columnIndex]));
-    
-    if(ngram.list.length === 0) {
-        displayCloudMessage('No repeating phrases found.');
-    } else {
-        await layout(ngram.list);
-    }
-}
 
 
 // When the textfile file input changes, process the file via wink-nlp
