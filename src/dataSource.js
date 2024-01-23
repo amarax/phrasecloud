@@ -72,7 +72,6 @@ var _events = {
 }
 
 function changed() {
-    console.log(_source);
     _events.change.forEach((cb)=>cb(_source));
 }
 

@@ -515,8 +515,6 @@ if(module.hot) {
 
 // Handle pasting text or files into the app
 document.addEventListener('paste', async (e)=>{
-    console.log(e.clipboardData.types);
-
     if(e.clipboardData.types.includes('Files')) {
         // Get the file from the clipboard
         let f = e.clipboardData.items[0]?.getAsFile() || e.clipboardData.files[0];
@@ -536,8 +534,6 @@ document.addEventListener('paste', async (e)=>{
         // Check if the text is a valid tab-separated table
         let text = e.clipboardData.getData('text/plain');
         let table = d3.tsvParseRows(text)
-
-        console.log(table);
 
         // Check if the table is a rectangular array
         // If it is, it's probably a spreadsheet
