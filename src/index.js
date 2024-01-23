@@ -20,7 +20,6 @@ function updateStatus(message, s) {
     }
 }
 
-var ngramList = null;
 var stats = {}
 
 var ngramSelection = {
@@ -39,7 +38,7 @@ var ngramSelection = {
 
         if(value) {
             // Get the ngram from the ngramList
-            let ngram = ngramList.find(n=>n.ngram === value);
+            let ng = ngram.list.find(n=>n.ngram === value);
 
             // Sanitise the markup, with the exception of the <span> tags
             function sanitise(markup) {
@@ -49,10 +48,10 @@ var ngramSelection = {
             }
 
             // Get responses for this ngram
-            let responses = ngram.responses?.map(r=>`<li>${sanitise(r.markup)}</li>`) || [];
+            let responses = ng.responses?.map(r=>`<li>${sanitise(r.markup)}</li>`) || [];
 
             d3.select('#responses')
-                .html(`Count: ${ngram.count}<br /><ul>${responses?.join('')}</ul>`)
+                .html(`Count: ${ng.count}<br /><ul>${responses?.join('')}</ul>`)
 
             // Scroll to top of responses
             document.getElementById('responses').scrollTop = 0;
@@ -76,6 +75,9 @@ var cloudFont = {family:'sans-serif', weight:'bold'}; // Use this to maintain fu
 var maxPhrases = 100;
 async function layout(ngrams) {
     if(!ngrams) return;
+
+    // Remove non-printing ngrams
+    ngrams = ngrams.filter(n=>n.ngram.trim().length > 0);
 
     // If ngrams is empty, display a message
     if(ngrams.length === 0) {
@@ -124,7 +126,7 @@ async function layout(ngrams) {
         .fontSize(function(d) { return d.size; })
         .on("end", words=>{
             draw(words, layout);
-            updateStatus(`Done! (Responses: ${Object.entries(stats).map(([k,v])=>`${k}: ${v}`).join(', ')}, Phrases: ${ngramList.length})`, stats);
+            updateStatus(`Done! (Responses: ${Object.entries(stats).map(([k,v])=>`${k}: ${v}`).join(', ')}, Phrases: ${ngram.list.length})`, stats);
         });
 
     cloudFont.weight && layout.fontWeight(cloudFont.weight);
@@ -293,7 +295,7 @@ const resizeObserver = new ResizeObserver((entries) => {
     for (let entry of entries) {
         clearTimeout(window.resizeTimer);
         window.resizeTimer = setTimeout(() => {
-            layout(ngramList);
+            layout(ngram.list);
         }, 100);
     }
 });
@@ -332,9 +334,6 @@ async function loadTableData(source) {
             responses = data;
             columnIndex = i;
 
-            // Special case since ngrams are already generated
-            ngramList = ngrams;
-            
             break;
         }
     }
@@ -342,7 +341,6 @@ async function loadTableData(source) {
     // If there are no ngrams, use the first column
     if(!responses) {
         columnIndex = defaultTableColumnIndex;
-        ngramList = [];
     }
 
     document.getElementById('columnSelect').value = columnIndex;
@@ -375,13 +373,13 @@ dataSource.addEventListener('change', async (source) => {
         } else {
             updateColumnHeaders();
 
-            ngramList = await ngram.generateNgramList(source.data);
+            await ngram.generateNgramList(source.data);
         }
 
-        if(ngramList.length === 0) {
+        if(ngram.list.length === 0) {
             displayCloudMessage('No repeating phrases found in the data.');
         } else {
-            await layout(ngramList);
+            await layout(ngram.list);
         }
     }
 });
@@ -391,12 +389,12 @@ dataSource.addEventListener('change', async (source) => {
 const columnSelect = document.getElementById('columnSelect');
 columnSelect.onchange = async (e) => {
     let columnIndex = parseInt(e.target.value);
-    ngramList = await ngram.generateNgramList(dataSource.source.data.map((row)=>row[columnIndex]));
+    await ngram.generateNgramList(dataSource.source.data.map((row)=>row[columnIndex]));
     
-    if(ngramList.length === 0) {
+    if(ngram.list.length === 0) {
         displayCloudMessage('No repeating phrases found.');
     } else {
-        await layout(ngramList);
+        await layout(ngram.list);
     }
 }
 
@@ -471,10 +469,10 @@ const ngramLengthDisplay = document.getElementById('ngramLengthDisplay');
 
 async function updateNgramLength(e) {
     ngramLengthDisplay.textContent = e.target.value;
-    ngramList = await ngram.applySettings({ minNgramLength: e.target.value });
+    await ngram.applySettings({ minNgramLength: e.target.value });
 
-    if(ngramList)
-        await layout(ngramList);
+    if(ngram.list)
+        await layout(ngram.list);
 }
 
 ngramLengthSlider.oninput = updateNgramLength;
@@ -541,8 +539,7 @@ fetch(defaultText)
 
 if(module.hot) {
     ngram.onWorkerReload = (ngrams) => {
-        ngramList = ngrams;
-        layout(ngramList);
+        layout(ngram.list);
     }
 }
 

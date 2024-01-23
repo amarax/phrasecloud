@@ -15,7 +15,7 @@
  */
 
 
-
+var ngramList = null;
 
 
 let worker = new Worker(new URL('./worker.js', import.meta.url));
@@ -71,7 +71,7 @@ let generateResolve = null;
 var onWorkerMessage = (e) => {
     let msg = e.data;
 
-    let ngramList = null;
+    ngramList = null;
 
     switch(msg.type) {
         case 'update':
@@ -139,6 +139,14 @@ const ngram = {
             generateResolve = resolve;
             worker.onmessage = onWorkerMessage;
         });
+    },
+
+    /**
+     * @returns {Array} - The last-generated ngram list
+     * @readonly
+     */
+    get list() {
+        return ngramList;
     },
 
     applySettings: async (newSettings) => {
