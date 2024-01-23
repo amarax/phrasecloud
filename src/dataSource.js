@@ -1,58 +1,39 @@
-import { csvParseRows } from "d3";
+import { csvParseRows, tsvParseRows } from "d3";
 import ngram from "./ngram/ngram";
 
 /**
  * @typedef {Object} Source
  * @property {string[]} data - The data to process for ngrams
- * @property {string} type - The data mimetype, e.g. 'text/csv' or 'text/plain'
  * @property {File} file - The file object, if any
- * @property {string[]} header - The CSV header row, if any
- * @property {Array} ngrams - The ngrams, if it was already generated
  * @property {boolean} loading - Whether the source is loading
+ * @property {'table'|'text'|null} type - The type of data
  */
 var _source = {
     data: null,
-    type: null,
     file: null,
-
-    header: null,
-    /**
-     * Represents the selected table column index for _source.data
-     * If null and tableData is available, all columns in the table will be used.
-     * @type {null | number}
-     */
-    columnIndex: null,
+    type: null,
 
     loading: false,
 };
 
 const EmptySource = {
     data: null,
-    type: null,
     file: null,
-
-    header: null,
+    type: null,
 
     loading: false,
 };
-
-/**
- * Represents the full dataset in table form
- * @type {null | string[][]}
- */
-var tableData = null;
-
-const defaultTableColumnIndex = 0;
 
 const reader = new FileReader();
 reader.onload = async (e) => {
     _source.loading = false;
 
-    if(_source.type === 'text/csv') {
-        await loadTableData( csvParseRows( e.target.result ) );
+    if(_source.file.type === 'text/csv') {
+        _source.data = csvParseRows( e.target.result ).filter((row) => row.length > 0 && row.some((c) => c.length > 0));
+        _source.type = 'table';
     } else {
         _source.data = e.target.result.split('\n').filter(r=>r.length > 0);
-        _source.header = null;defaultTableColumnIndex
+        _source.type = 'text';
     }
     changed();
 
@@ -76,37 +57,6 @@ function changed() {
 }
 
 
-async function loadTableData(table) {
-    tableData = table;
-
-    // Remove empty rows
-    tableData = tableData.filter((row) => row.length > 0 && row.some((c) => c.length > 0));
-
-    _source.header = tableData.shift();
-
-    // Loop through the columns until we find one that has ngrams in it
-    for(let i = 0; i < _source.header.length; i++) {
-        let data = tableData.map((row) => row[i]);
-        let ngrams = await ngram.generateNgramList(data);
-        if(ngrams.length > 0) {
-            _source.data = data;
-            _source.columnIndex = i;
-
-            // Special case since ngrams are already generated
-            _source.ngrams = ngrams;
-            
-            break;
-        }
-    }
-    
-    // If there are no ngrams, use the first column
-    if(_source.columnIndex === null) {
-        _source.columnIndex = defaultTableColumnIndex;
-        _source.data = tableData.map((row) => row[_source.columnIndex]);
-        _source.ngrams = [];
-    }
-}
-
 
 /**
  * @typedef {Object} DataSource
@@ -121,18 +71,22 @@ function construct() {
             if(source instanceof File) {
                 _source.loading = true;
                 _source.file = source;
-                _source.type = source.type;
                 reader.readAsText(_source.file);
             } else if(source instanceof Array && source.every(r=>r instanceof Array)) {
-                _source.type = 'text/csv';
-                _source.loading = true;
-                loadTableData(source).then(()=>{
-                    _source.loading = false;
-                    changed();
-                });
+                _source.type = 'table';
+                _source.loading = false;
+                _source.data = source.filter((row) => row.length > 0 && row.some((c) => c.length > 0));
             } else if(typeof source === 'string') {
-                _source.data = source.split('\n').filter(r=>r.length > 0);
-                _source.type = 'text/plain';
+                let table = tsvParseRows(source)
+                    .filter((row) => row.length > 0 && row.some((c) => c.length > 0));
+                let isSpreadsheet = table[0].length > 1 && table.every(r=>r.length === table[0].length);
+                if(isSpreadsheet) {
+                    _source.type = 'table';
+                    _source.data = table;
+                } else {
+                    _source.data = source.split('\n').filter(r=>r.length > 0);
+                    _source.type = 'text';
+                }
                 _source.loading = false;
             }
             changed();

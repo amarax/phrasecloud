@@ -300,7 +300,56 @@ const resizeObserver = new ResizeObserver((entries) => {
 
 resizeObserver.observe(cloudElement);
 
+const defaultTableColumnIndex = 0;
+
+var columnHeaders = null;
+function updateColumnHeaders(headers) {
+    d3.select('#columnSelect')
+    .attr('disabled', headers == null ? true : null)
+    .selectAll('option')
+    .data(headers || ['Not a table'])
+    .join('option')
+        .attr('value', headers ? (d,i)=>i : null)
+        .text(d=>d)
+
+    if(headers)
+        document.getElementById('columnSelect').value = defaultTableColumnIndex;
+}
+
+var columnIndex = defaultTableColumnIndex
+async function loadTableData(source) {
+    let tableData = source.data;
+
+    columnHeaders = tableData.shift();
+    updateColumnHeaders(columnHeaders);
+
+    // Loop through the columns until we find one that has ngrams in it
+    let responses = null;
+    for(let i = 0; i < columnHeaders.length; i++) {
+        let data = tableData.map((row) => row[i]);
+        let ngrams = await ngram.generateNgramList(data);
+        if(ngrams.length > 0) {
+            responses = data;
+            columnIndex = i;
+
+            // Special case since ngrams are already generated
+            ngramList = ngrams;
+            
+            break;
+        }
+    }
+    
+    // If there are no ngrams, use the first column
+    if(!responses) {
+        columnIndex = defaultTableColumnIndex;
+        ngramList = [];
+    }
+
+    document.getElementById('columnSelect').value = columnIndex;
+}
+
 dataSource.addEventListener('change', async (source) => {
+    columnHeaders = null;
     if(source.loading) {
         status.innerHTML = 'Loading...';
 
@@ -310,59 +359,40 @@ dataSource.addEventListener('change', async (source) => {
             displayCloudMessage('Processing text...');
         }
 
-        disableColumnSelect();
+        updateColumnHeaders();
         return;
     }
 
-    if(source.file !== fileInput.value) {
+    if(![...fileInput.files].includes(source.file)) {
         fileInput.value = null;
     }
 
-    if(source.type === 'text/csv') {
-
-    } else {
-
-    }
-
-    if(source.header) {
-        d3.select('#columnSelect')
-            .attr('disabled', null)
-            .selectAll('option')
-            .data(source.header)
-            .join('option')
-                .attr('value', (d,i)=>i)
-                .text(d=>d)
-
-        document.getElementById('columnSelect').value = source.columnIndex;
-    } else {
-        disableColumnSelect();
-    }
-
     if(source.data) {
-        ngramList = source.ngrams || await ngram.generateNgramList(source.data);
+        if(source.type === 'table') {
+            await loadTableData(source);
+
+
+        } else {
+            updateColumnHeaders();
+
+            ngramList = await ngram.generateNgramList(source.data);
+        }
+
         if(ngramList.length === 0) {
-            displayCloudMessage('No repeating phrases found.');
+            displayCloudMessage('No repeating phrases found in this file.');
         } else {
             await layout(ngramList);
         }
     }
 });
 
-function disableColumnSelect() {
-    // Disable the column select
-    d3.select('#columnSelect')
-    .attr('disabled', true)
-    .selectAll('option')
-    .data(['Not a CSV file'])
-    .join('option')
-        .text(d=>d)
-}
-
 
 // When the column select changes, process the file via wink-nlp
 const columnSelect = document.getElementById('columnSelect');
-columnSelect.onchange = (e) => {
-    dataSource.tableColumnIndex = parseInt(e.target.value);
+columnSelect.onchange = async (e) => {
+    let columnIndex = parseInt(e.target.value);
+    ngramList = await ngram.generateNgramList(dataSource.source.data.map((row)=>row[columnIndex]));
+    await layout(ngramList);
 }
 
 
@@ -522,8 +552,7 @@ document.addEventListener('paste', async (e)=>{
         // Only if the file is text or csv
         if(f.type === 'text/plain' || f.type === 'text/csv') {
             // Load the file
-            file = f;
-            dataSource.source = file;
+            dataSource.source = f;
             return;
         }
     } 
@@ -533,14 +562,8 @@ document.addEventListener('paste', async (e)=>{
         // If it does, it will be tab separated
         // Check if the text is a valid tab-separated table
         let text = e.clipboardData.getData('text/plain');
-        let table = d3.tsvParseRows(text)
 
-        // Check if the table is a rectangular array
-        // If it is, it's probably a spreadsheet
-        let isSpreadsheet = table.every(r=>r.length === table[0].length);
-
-
-        dataSource.source = isSpreadsheet ? table : text;
+        dataSource.source = text;
     }
 });
 
