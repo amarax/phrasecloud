@@ -49,7 +49,12 @@
 
             <div class="sidePanel collapsible">
                 <button onclick="toggleFloatingWindow(event)">X</button>
-                <div id="responses" class="expandedContent"></div>
+                <div id="responses" class="expandedContent">
+                    <p id="responseCount" class="hidden">Count: </p>
+                    <ul id="responseList">
+                    </ul>
+                    <div id="responsesEmpty" class="empty">Click on a phrase to show where it is mentioned. If it looks like a category, only the count will be displayed.</div>
+                </div>
             </div>
         </div>
 

@@ -36,35 +36,46 @@ var ngramSelection = {
             .selectAll('text')
             .classed('selected', d=>d?.key === value);
 
+        let responses = [];
         if(value) {
             // Get the ngram from the ngramList
             let ng = ngram.list.find(n=>n.ngram === value);
 
-            // Sanitise the markup, with the exception of the <span> tags
-            function sanitise(markup) {
-                // Replace all < and > with &lt; and &gt; unless they are part of an exception match
-                return markup.replace(/</g, '&lt;').replace(/>/g, '&gt;')
-                    .replace(/&lt;span class="match"&gt;(.*?)&lt;\/span&gt;/g, m=>m.replace(/&lt;span class="match"&gt;/g, '<span class="match">').replace(/&lt;\/span&gt;/g, '</span>'));
-            }
-
             // Get responses for this ngram
-            let responses = ng.responses?.map(r=>`<li>${sanitise(r.markup)}</li>`) || [];
+            responses = ng.responses;
 
-            d3.select('#responses')
-                .html(`Count: ${ng.count}<br /><ul>${responses?.join('')}</ul>`)
+            d3.select('#responseCount')
+                .text(`Item count: ${ng.count}`)
 
             // Scroll to top of responses
             document.getElementById('responses').scrollTop = 0;
-
 
             // If the side panel is hidden, show it
             if(!document.getElementById('responses').parentElement.classList.contains('expanded')) {
                 document.getElementById('responses').parentElement.classList.add('expanded');
             }
-        } else {
-            d3.select('#responses')
-                .html(``)
         }
+
+        // Sanitise the markup, with the exception of the <span> tags
+        function sanitise(markup) {
+            // Replace all < and > with &lt; and &gt; unless they are part of an exception match
+            return markup.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/&lt;span class="match"&gt;(.*?)&lt;\/span&gt;/g, m=>m.replace(/&lt;span class="match"&gt;/g, '<span class="match">').replace(/&lt;\/span&gt;/g, '</span>'));
+        }
+
+        d3.select('#responseCount')
+            .classed('hidden', !value);
+
+        d3.select('#responseList')
+            .selectAll('li')
+            .data(responses?.map(r=>sanitise(r.markup)) || [])
+            .join('li')
+                .html(d=>d)
+
+
+        d3.select('#responsesEmpty')
+            .classed('hidden', value);
+
     }
 }
 

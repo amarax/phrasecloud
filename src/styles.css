@@ -25,15 +25,23 @@ select#columnSelect {
     white-space: nowrap;
 }
 
+
+
+
+#responsesEmpty {
+    color: #999;
+    margin: 16px 0;
+}
+
 #responses ul {
     padding: 0 0;
-    margin: 16px 0;
+    margin: 0;
 }
 
 #responses li {
     list-style-type: none;
     padding: 0 0;
-    margin: 8px 16px;
+    margin: 8px 0;
 
     background-color: white;
 
@@ -157,12 +165,17 @@ body {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
+
+    position: relative;
 }
 
 .sidePanel #responses {
     overflow-y: auto;
     height: 100%;
     width: 100%;
+
+    padding: 0 16px;
+    box-sizing: border-box;
 
     flex: 1;
 }
