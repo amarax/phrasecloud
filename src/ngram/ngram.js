@@ -112,7 +112,7 @@ var onWorkerMessage = (e) => {
     
 }
 
-var ngram = {
+const ngram = {
 
     /**
      * @param {statusUpdateCallback} callback - The callback function
@@ -130,6 +130,8 @@ var ngram = {
      */
     generateNgramList: async (tc) => {
         textContent = tc || textContent;
+
+        // TODO Restart worker if it's already running and not responding
 
         return new Promise((resolve, reject)=>{
             worker.postMessage({responses:textContent, ...settings});

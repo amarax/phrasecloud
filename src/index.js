@@ -5,8 +5,12 @@ import './styles.css';
 
 import ngram from './ngram/ngram.js';
 
+import DataSource from './dataSource.js';
+
 const status = document.getElementById('status');
 
+
+var dataSource = new DataSource();
 
 function updateStatus(message, s) {
     status.innerHTML = message;
@@ -296,56 +300,53 @@ const resizeObserver = new ResizeObserver((entries) => {
 
 resizeObserver.observe(cloudElement);
 
-const reader = new FileReader();
-const defaultColumn = 0;
-reader.onload = async (e) => {
-    let csv = d3.csvParseRows( e.target.result );
+dataSource.addEventListener('change', async (source) => {
+    if(source.loading) {
+        status.innerHTML = 'Loading...';
 
-    if(file?.type === 'text/csv') {
-        // Take the first row and populate columSelect with the column names
-        let columns = csv[0];
+        if(source.file) {
+            displayCloudMessage('Loading file...');
+        } else {
+            displayCloudMessage('Processing text...');
+        }
+
+        disableColumnSelect();
+        return;
+    }
+
+    if(source.file !== fileInput.value) {
+        fileInput.value = null;
+    }
+
+    if(source.type === 'text/csv') {
+
+    } else {
+
+    }
+
+    if(source.header) {
         d3.select('#columnSelect')
             .attr('disabled', null)
             .selectAll('option')
-            .data(columns)
+            .data(source.header)
             .join('option')
                 .attr('value', (d,i)=>i)
                 .text(d=>d)
 
-        // Select the first column
-        document.getElementById('columnSelect').value = defaultColumn;
+        document.getElementById('columnSelect').value = source.columnIndex;
+    } else {
+        disableColumnSelect();
+    }
 
-        // During the first load, we will cycle through the columns from defaultColumn until we find one that has data
-        // This is because the first column is often a timestamp or ID column
-        for(let column = defaultColumn; column < columns.length; column++) {
-            let responses = csv.map(row=>row[column]);
-            responses.shift(); // Remove the first row (column names)
-
-            responses = responses.filter(r=>r.length > 0);
-
-            ngramList = await ngram.generateNgramList(responses);
-            if(ngramList.length > 0) {
-                // Set the column select to the column that has data
-                document.getElementById('columnSelect').value = column;
-                break;
-            }
-        }
-
+    if(source.data) {
+        ngramList = source.ngrams || await ngram.generateNgramList(source.data);
         if(ngramList.length === 0) {
-            document.getElementById('columnSelect').value = defaultColumn;
-
-            displayCloudMessage('No repeating phrases found in this file.');
+            displayCloudMessage('No repeating phrases found.');
         } else {
             await layout(ngramList);
         }
-
-    } else {
-        disableColumnSelect();
-
-        postResponses(reader.result);
     }
-
-};
+});
 
 function disableColumnSelect() {
     // Disable the column select
@@ -354,54 +355,21 @@ function disableColumnSelect() {
     .selectAll('option')
     .data(['Not a CSV file'])
     .join('option')
-        .text(d=>console.log(d)||d)
+        .text(d=>d)
 }
 
-async function postResponses(inputText) {
-
-    let responses = null;
-    if(file?.type === 'text/csv') {
-        let column = document.getElementById('columnSelect').value;
-        let csv = d3.csvParseRows( inputText );
-        responses = csv.map(row=>row[column]);
-        
-        // Remove the first row (column names)
-        responses.shift();
-
-        responses = responses.filter(r=>r.length > 0);
-    } else {
-        responses = inputText.split('\n').filter(r=>r.length > 0);
-    }
-
-    if(responses) {
-        ngramList = await ngram.generateNgramList(responses);
-        await layout(ngramList);
-    }
-}
 
 // When the column select changes, process the file via wink-nlp
 const columnSelect = document.getElementById('columnSelect');
 columnSelect.onchange = (e) => {
-    if(!file || file.type !== 'text/csv') return;
-
-    postResponses(reader.result);
+    dataSource.tableColumnIndex = parseInt(e.target.value);
 }
 
-
-let file = null;
 
 // When the textfile file input changes, process the file via wink-nlp
 const fileInput = document.getElementById('textfile');
 fileInput.onchange = (e) => {
-    if(file !== e.target.files[0]) {
-        file = e.target.files[0];
-        // Change app content to show loading message
-        status.innerHTML = 'Loading...';
-
-        if(file) {
-            loadFile(file);
-        }
-    }
+    dataSource.source = e.target.files[0];
 }
 
 document.getElementById('generate').onclick = async (e) => {
@@ -450,38 +418,16 @@ function displayCloudMessage(message) {
 }
 
 
-function loadFile(file) {
-    if(file) {
-        displayCloudMessage('Loading file...');        
-
-        reader.readAsText(file);
-    }
-}
-
-
 import dropZone from './dropZone.js';
 let drop = dropZone(document.getRootNode())
     .isallowed(e=>isText(e) || isTextFile(e))
     .ondrop(e=>{
         if(isText(e)) {
-            file = null;
-            // Reset the file input
-            fileInput.value = null;
-
-            disableColumnSelect();
-
-            let text = e.dataTransfer.getData('text/plain');
-            postResponses(text);
-
-            displayCloudMessage('Processing text...');
+            dataSource.source = e.dataTransfer.getData('text/plain');
         } else if(isTextFile(e)) {
-            file = e.dataTransfer.items[0]?.getAsFile() || e.dataTransfer.files[0];
-
             fileInput.value = null;
-
-            loadFile(file)
+            dataSource.source = e.dataTransfer.items[0]?.getAsFile() || e.dataTransfer.files[0];
         }
-        console.log("Processing text...");
     });
 
 
@@ -553,7 +499,7 @@ ngram.onStatusUpdate = updateStatus;
 fetch(defaultText)
     .then(r => r.text())
     .then(t => {
-        postResponses(t);
+        dataSource.source = t;
     });
 
 
@@ -569,6 +515,8 @@ if(module.hot) {
 
 // Handle pasting text or files into the app
 document.addEventListener('paste', async (e)=>{
+    console.log(e.clipboardData.types);
+
     if(e.clipboardData.types.includes('Files')) {
         // Get the file from the clipboard
         let f = e.clipboardData.items[0]?.getAsFile() || e.clipboardData.files[0];
@@ -577,16 +525,26 @@ document.addEventListener('paste', async (e)=>{
         if(f.type === 'text/plain' || f.type === 'text/csv') {
             // Load the file
             file = f;
-            loadFile(file);
+            dataSource.source = file;
+            return;
         }
-    } else if(e.clipboardData.types.includes('text/plain')) {
-        // Get the text from the clipboard
+    } 
+    
+    if(e.clipboardData.types.includes('text/plain')) {
+        // Detect if the text from the clipboard comes from a spreadsheet
+        // If it does, it will be tab separated
+        // Check if the text is a valid tab-separated table
         let text = e.clipboardData.getData('text/plain');
+        let table = d3.tsvParseRows(text)
 
-        // Post the responses
-        postResponses(text);
+        console.log(table);
 
-        displayCloudMessage('Processing text...');
+        // Check if the table is a rectangular array
+        // If it is, it's probably a spreadsheet
+        let isSpreadsheet = table.every(r=>r.length === table[0].length);
+
+
+        dataSource.source = isSpreadsheet ? table : text;
     }
 });
 

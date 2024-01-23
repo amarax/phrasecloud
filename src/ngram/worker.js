@@ -45,7 +45,7 @@ function generateNgrams(data) {
 
     // Remove repeated responses
     const dataset = [...new Set(data)];
-    const responses = dataset.map(r=>nlp.readDoc(r));
+    const responses = dataset.map(r=>nlp.readDoc(r.trim())); // Trim because whitespaces will trip up the tokenizer
 
     let isLikelyCategoryColumn = data.length > 10 && dataset.length < 0.2 * data.length;
     if(isLikelyCategoryColumn) {
