@@ -129,7 +129,7 @@ async function layout(ngrams) {
             if(d.responses) w.responses = d.responses;
             return w;
         }))
-        .padding(4)
+        .padding(1)
         
         .font(cloudFont.family)
         // .fontWeight(cloudFont.weight)
@@ -151,14 +151,46 @@ function createDataColors() {
     let chroma = 0.4;
     let lightness = 30;
 
+    // Splitmix32 PRNG
+    function splitmix32(a) {
+        return function() {
+          a |= 0; a = a + 0x9e3779b9 | 0;
+          var t = a ^ a >>> 16; t = Math.imul(t, 0x21f0aaad);
+              t = t ^ t >>> 15; t = Math.imul(t, 0x735a2d97);
+          return ((t = t ^ t >>> 15) >>> 0) / 4294967296;
+        }
+    }
+
+    // Hash function
+    function cyrb128(str) {
+        let h1 = 1779033703, h2 = 3144134277,
+            h3 = 1013904242, h4 = 2773480762;
+        for (let i = 0, k; i < str.length; i++) {
+            k = str.charCodeAt(i);
+            h1 = h2 ^ Math.imul(h1 ^ k, 597399067);
+            h2 = h3 ^ Math.imul(h2 ^ k, 2869860233);
+            h3 = h4 ^ Math.imul(h3 ^ k, 951274213);
+            h4 = h1 ^ Math.imul(h4 ^ k, 2716044179);
+        }
+        h1 = Math.imul(h3 ^ (h1 >>> 18), 597399067);
+        h2 = Math.imul(h4 ^ (h2 >>> 22), 2869860233);
+        h3 = Math.imul(h1 ^ (h3 >>> 17), 951274213);
+        h4 = Math.imul(h2 ^ (h4 >>> 19), 2716044179);
+        h1 ^= (h2 ^ h3 ^ h4), h2 ^= h1, h3 ^= h1, h4 ^= h1;
+        return [h1>>>0, h2>>>0, h3>>>0, h4>>>0];
+    }
+
     function color(d) {
         if(!d?.key) return null;
 
         // Generate a random colour that's based on the text as a seed
         // Use the LCH model so that colours are perceptually similar in brightness
-        let seed = d.key.split('').reduce((a,b)=>a+b.charCodeAt(0), 0) / Math.PI;
+        let seed = cyrb128(d.key);
+        // let h = splitmix32(seed[0])();
+        let h = seed[0]/Math.pow(2,32);
+        colorSeedValues.push(h);
 
-        let hue = seed % hueRange + hueOffset + 0.5*hueRange;
+        let hue = h * hueRange + hueOffset + 0.5*hueRange;
 
         // Check if the device is wide color gamut
         if(window.matchMedia('(color-gamut: p3)').matches) {

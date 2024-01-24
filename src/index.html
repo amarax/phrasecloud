@@ -60,19 +60,20 @@
 
         <div class="dropZoneBox hidden"><div class="outline">Drop text or CSV files here</div></div>
 
-        <div id="floatingWindow" class="collapsible" style="position: fixed; bottom: 20px; left: 20px; background-color: white; padding: 10px; border: 1px solid black;">
+        <div class="collapsible" style="position: fixed; bottom: 20px; left: 20px; background-color: white; padding: 10px; border: 1px solid black;">
             <div class="expandedContent">
                 <label for="hueRange">Hue Range:</label>
-                <input type="range" id="hueRange" name="hueRange" min="1" max="360" value="60" step="0.1"><br>
+                <input type="range" id="hueRange" name="hueRange" min="1" max="360" value="120" step="0.1"><br>
 
                 <label for="hueOffset">Hue Offset:</label>
-                <input type="range" id="hueOffset" name="hueOffset" min="0" max="360" value="187" step="0.1"><br>
+                <input type="range" id="hueOffset" name="hueOffset" min="0" max="360" value="120" step="0.1"><br>
 
                 <label for="chroma">Chroma:</label>
                 <input type="range" id="chroma" name="chroma" min="0" max="0.4" value="0.132" step="0.001"><br>
 
+                <!-- Default lightness here should satisfy WCAG AA over all hues -->
                 <label for="lightness">Lightness:</label>
-                <input type="range" id="lightness" name="lightness" min="0" max="100" value="55" step="0.1"><br>
+                <input type="range" id="lightness" name="lightness" min="0" max="100" value="64" step="0.1"><br>
             </div>
 
             <button id="toggleButton" onclick="toggleFloatingWindow(event)">Colour picker</button>
