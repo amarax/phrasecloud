@@ -111,8 +111,9 @@ async function layout(ngrams) {
     let maxPhraseLength = Math.max(...ngrams.map(n=>n.phrase.length));
 
     function size(d) {
-        return Math.sqrt(d.count/maxResponses);
-        // return d.count/maxResponses;
+        // return Math.sqrt(d.count/maxResponses);
+        // return Math.sqrt( (d.count/maxResponses)/(d.phrase.length) );
+        return d.count/maxResponses;
     }
     let maxApproxPhraseWidth = Math.max(...ngrams.map(n=>n.phrase.length*size(n)));
 
@@ -121,7 +122,7 @@ async function layout(ngrams) {
     // And make sure the longest phrase fits (character count * 0.6 is a rough estimate of the width of the text for English)
     let cloudRect = document.getElementById('cloud').getBoundingClientRect();
     let maxFontSize = Math.min(cloudRect.height / Math.min(8, ngrams.length), cloudRect.width / (maxApproxPhraseWidth*.6));
-    
+
     let layout = cloud()
         .size([cloudRect.width, cloudRect.height])
         .words(ngrams.map(function(d) {
@@ -186,10 +187,9 @@ function createDataColors() {
         // Generate a random colour that's based on the text as a seed
         // Use the LCH model so that colours are perceptually similar in brightness
         let seed = cyrb128(d.key);
-        // let h = splitmix32(seed[0])();
-        let h = seed[0]/Math.pow(2,32);
-        colorSeedValues.push(h);
-
+        let h = splitmix32(seed[2])();
+        // let h = seed[0]/Math.pow(2,32);
+        
         let hue = h * hueRange + hueOffset + 0.5*hueRange;
 
         // Check if the device is wide color gamut
