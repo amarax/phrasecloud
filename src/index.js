@@ -121,7 +121,7 @@ async function layout(ngrams) {
     // Fit roughly 8 large rows
     // And make sure the longest phrase fits (character count * 0.6 is a rough estimate of the width of the text for English)
     let cloudRect = document.getElementById('cloud').getBoundingClientRect();
-    let maxFontSize = Math.min(cloudRect.height / Math.min(8, ngrams.length), cloudRect.width / (maxApproxPhraseWidth*.6));
+    let maxFontSize = Math.min(cloudRect.height / Math.min(6, ngrams.length), cloudRect.width / (maxApproxPhraseWidth*.6));
 
     let layout = cloud()
         .size([cloudRect.width, cloudRect.height])
