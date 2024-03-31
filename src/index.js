@@ -36,64 +36,67 @@ var ngramSelection = {
             .selectAll('text')
             .classed('selected', d=>d?.key === value);
 
-        let responses = [];
-        if(value) {
-            // Get the ngram from the ngramList
-            let ng = ngram.list.find(n=>n.ngram === value);
+        drawResponseList(value, document.getElementById('searchInclude').value);
+    }
+}
 
-            // Get responses for this ngram
-            responses = ng.responses;
+function drawResponseList(selected, searchInclude) {
+    let responses = [];
+    if(selected) {
+        // Get the ngram from the ngramList
+        let ng = ngram.list.find(n=>n.ngram === selected);
 
-            d3.select('#responseCount')
-                .text(`Item count: ${ng.count}`)
-
-            // Scroll to top of responses
-            document.getElementById('responses').scrollTop = 0;
-
-            // If the side panel is hidden, show it
-            if(!document.getElementById('responses').parentElement.classList.contains('expanded')) {
-                document.getElementById('responses').parentElement.classList.add('expanded');
-            }
-        }
-
-        // Sanitise the markup, with the exception of the <span> tags
-        function sanitise(markup) {
-            // Replace all < and > with &lt; and &gt; unless they are part of an exception match
-            return markup.replace(/</g, '&lt;').replace(/>/g, '&gt;')
-                .replace(/&lt;span class="match"&gt;(.*?)&lt;\/span&gt;/g, m=>m.replace(/&lt;span class="match"&gt;/g, '<span class="match">').replace(/&lt;\/span&gt;/g, '</span>'));
-        }
-
-        const searchIncludeMarkup = ['<span class="search">', '</span>'];
-        const searchInclude = document.getElementById('searchInclude').value.split(' ').map(s=>s.trim()).filter(s=>s.length > 0);
-
-        // If the searchInclude is not empty, highlight the searchInclude in the responses
-        function highlight(markup) {
-            if(searchInclude.length === 0) return markup;
-
-            for(let s of searchInclude) {
-                markup = markup.replace(new RegExp(s, 'gi'), m=>searchIncludeMarkup[0] + m + searchIncludeMarkup[1]);
-            }
-            return markup;
-        }
-
-        function format(response) {
-            return highlight(sanitise(response));
-        }
+        // Get responses for this ngram
+        responses = ng.responses;
 
         d3.select('#responseCount')
-            .classed('hidden', !value);
+            .text(`Item count: ${ng.count}`)
 
-        d3.select('#responseList')
-            .selectAll('li')
-            .data(responses?.map(r=>format(r.markup)) || [])
-            .join('li')
-                .html(d=>d)
+        // Scroll to top of responses
+        document.getElementById('responses').scrollTop = 0;
 
-
-        d3.select('#responsesEmpty')
-            .classed('hidden', value);
-
+        // If the side panel is hidden, show it
+        if(!document.getElementById('responses').parentElement.classList.contains('expanded')) {
+            document.getElementById('responses').parentElement.classList.add('expanded');
+        }
     }
+
+    // Sanitise the markup, with the exception of the <span> tags
+    function sanitise(markup) {
+        // Replace all < and > with &lt; and &gt; unless they are part of an exception match
+        return markup.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/&lt;span class="match"&gt;(.*?)&lt;\/span&gt;/g, m=>m.replace(/&lt;span class="match"&gt;/g, '<span class="match">').replace(/&lt;\/span&gt;/g, '</span>'));
+    }
+
+    const searchIncludeMarkup = ['<span class="search">', '</span>'];
+    const _searchInclude = searchInclude.split(' ').map(s=>s.trim()).filter(s=>s.length > 0);
+
+    // If the searchInclude is not empty, highlight the searchInclude in the responses
+    function highlight(markup) {
+        if(_searchInclude.length === 0) return markup;
+
+        for(let s of _searchInclude) {
+            markup = markup.replace(new RegExp(s, 'gi'), m=>searchIncludeMarkup[0] + m + searchIncludeMarkup[1]);
+        }
+        return markup;
+    }
+
+    function format(response) {
+        return highlight(sanitise(response));
+    }
+
+    d3.select('#responseCount')
+        .classed('hidden', !selected);
+
+    d3.select('#responseList')
+        .selectAll('li')
+        .data(responses?.map(r=>format(r.markup)) || [])
+        .join('li')
+            .html(d=>d)
+
+
+    d3.select('#responsesEmpty')
+        .classed('hidden', selected);
 }
 
 // var cloudFont = {family:'Manrope', weight:'800'};
@@ -806,6 +809,11 @@ document.getElementById('searchInclude').oninput = async (e) => {
     try {
         await ngram.applySettings({ include: e.target.value });
         await layout(ngram.list);
+
+        // If there is a selected ngram, update the response list
+        if(ngramSelection.selected) {
+            drawResponseList(ngramSelection.selected, e.target.value);
+        }
     } catch(e) {
         console.log(e);
         return;
