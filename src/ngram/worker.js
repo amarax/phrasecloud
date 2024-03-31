@@ -81,7 +81,7 @@ function ngramsByStructure(dataset, structure, responseInclude) {
     responses.forEach((response, responseIndex) => {
         let _matches = response.customEntities();
         _matches.each(match=>{
-            let key = match.out(its.stem);
+            let key = match.out(its.stem).toLowerCase();
             if(!matches[key]) {
                 matches[key] = [];
             }
@@ -172,7 +172,7 @@ function generateNgrams(data) {
     }
 
     if(phraseStructure !== null) {
-        let ngrams = ngramsByStructure(dataset, phraseStructure);
+        let ngrams = ngramsByStructure(dataset, phraseStructure, responseInclude);
         self.postMessage({type:'ngrams', content:{ngrams}});
 
         console.timeEnd(`generateNgrams ${minNgramLength}`);
@@ -411,7 +411,7 @@ const PartsOfSpeechTags = [
     'PART',
     'PRON',
     'PROPN',
-    'PUNCT',
+    // 'PUNCT',
     'SCONJ',
     'SYM',
     'VERB',
@@ -447,7 +447,7 @@ self.onmessage = (e) => {
         } else {
             const ANY = `[${PartsOfSpeechTags.join('|')}]`;
             const ANYOREMPTY = `[|${PartsOfSpeechTags.join('|')}]`;
-            const ANYUpTo3Words = `${ANY} ${ANYOREMPTY} ${ANYOREMPTY}`;
+            const ANYUpTo3Words = `${ANY}`;
 
             phraseStructure = e.data.phraseStructure.replace(/\*/g, ANYUpTo3Words);
         }
