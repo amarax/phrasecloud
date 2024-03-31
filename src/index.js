@@ -64,7 +64,7 @@ var ngramSelection = {
         }
 
         const searchIncludeMarkup = ['<span class="search">', '</span>'];
-        const searchInclude = document.getElementById('searchInclude').value.trim().split(' ');
+        const searchInclude = document.getElementById('searchInclude').value.split(' ').map(s=>s.trim()).filter(s=>s.length > 0);
 
         // If the searchInclude is not empty, highlight the searchInclude in the responses
         function highlight(markup) {
