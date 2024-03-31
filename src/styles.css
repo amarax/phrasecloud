@@ -57,6 +57,10 @@ select#columnSelect {
     /* cursor: grab; */
 }
 
+#responses li span.search {
+    background-color: #00a6ff40;
+}
+
 #cloud g.cloud text {
     cursor: pointer;
     transition: font-size 0.5s ease, transform 0.5s ease;

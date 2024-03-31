@@ -63,12 +63,29 @@ var ngramSelection = {
                 .replace(/&lt;span class="match"&gt;(.*?)&lt;\/span&gt;/g, m=>m.replace(/&lt;span class="match"&gt;/g, '<span class="match">').replace(/&lt;\/span&gt;/g, '</span>'));
         }
 
+        const searchIncludeMarkup = ['<span class="search">', '</span>'];
+        const searchInclude = document.getElementById('searchInclude').value.trim().split(' ');
+
+        // If the searchInclude is not empty, highlight the searchInclude in the responses
+        function highlight(markup) {
+            if(searchInclude.length === 0) return markup;
+
+            for(let s of searchInclude) {
+                markup = markup.replace(new RegExp(s, 'gi'), m=>searchIncludeMarkup[0] + m + searchIncludeMarkup[1]);
+            }
+            return markup;
+        }
+
+        function format(response) {
+            return highlight(sanitise(response));
+        }
+
         d3.select('#responseCount')
             .classed('hidden', !value);
 
         d3.select('#responseList')
             .selectAll('li')
-            .data(responses?.map(r=>sanitise(r.markup)) || [])
+            .data(responses?.map(r=>format(r.markup)) || [])
             .join('li')
                 .html(d=>d)
 
