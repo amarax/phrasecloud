@@ -6,6 +6,8 @@ const its = nlp.its;
 const as = nlp.as;
 
 
+// Send a message to the main thread to confirm the worker has started
+self.postMessage({type:'ready', content:'Worker started'});
 console.log('Worker started.');
 
 /**

@@ -449,7 +449,10 @@ var dataSourceSettings = {
                 } else {
                     layout(ngrams);
                 }
-            });
+            })
+            .catch(e=>{
+                console.log(e);
+            })
 
         if(columnSelectionElements.select.value != _columnIndex)
             columnSelectionElements.select.value = _columnIndex;
@@ -493,7 +496,13 @@ async function loadTableData(source) {
     let responses = null;
     for(let i = 0; i < columnHeaders.length; i++) {
         let data = tableData.map((row) => row[i]);
-        let ngrams = await ngram.generateNgramList(data)
+        let ngrams;
+        try {
+            ngrams = await ngram.generateNgramList(data)
+        } catch(e) {
+            console.log(e);
+            continue;
+        }
         ngrams = ngrams.filter(n=>n.ngram.trim().length > 0);
         if(ngrams.length > 0) {
             responses = data;
@@ -538,7 +547,12 @@ dataSource.addEventListener('change', async (source) => {
         } else {
             updateColumnHeaders();
 
-            await ngram.generateNgramList(source.data);
+            try {
+                await ngram.generateNgramList(source.data);
+            } catch(e) {
+                console.log(e);
+                return;
+            }
         }
 
         if(ngram.list.length === 0) {
@@ -557,8 +571,12 @@ fileInput.onchange = (e) => {
 }
 
 document.getElementById('generate').onclick = async (e) => {
-    let ngrams = await ngram.generateNgramList();
-    await layout(ngrams);
+    try {
+        let ngrams = await ngram.generateNgramList();
+        await layout(ngrams);
+    } catch(e) {
+        console.log(e);
+    }
 }
 
 function isText(e) {
@@ -626,10 +644,15 @@ const ngramLengthDisplay = document.getElementById('ngramLengthDisplay');
 
 async function updateNgramLength(e) {
     ngramLengthDisplay.textContent = e.target.value;
-    await ngram.applySettings({ minNgramLength: e.target.value });
 
-    if(ngram.list)
-        await layout(ngram.list);
+    try {
+        await ngram.applySettings({ minNgramLength: e.target.value });
+
+        if(ngram.list)
+            await layout(ngram.list);
+    } catch(e) {
+        console.log(e);
+    }
 }
 
 ngramLengthSlider.oninput = updateNgramLength;
@@ -754,4 +777,16 @@ document.addEventListener('paste', async (e)=>{
 document.getElementById('showLegend').onclick = (e) => {
     let show = e.target.checked;
     d3.select('#cloud').select('g.legend').classed('hidden', !show);
+}
+
+
+// When searchInclude changes, request a new ngram list
+document.getElementById('searchInclude').oninput = async (e) => {
+    try {
+        await ngram.applySettings({ include: e.target.value });
+        await layout(ngram.list);
+    } catch(e) {
+        console.log(e);
+        return;
+    }
 }

@@ -46,6 +46,8 @@ if (module.hot) {
 
 var settings = {
     minNgramLength: 1,
+    include: "",  // Responses must include these words
+    phraseStructure: null,  // Ngrams should match this structure
 }
 var textContent = null;
 
@@ -61,7 +63,15 @@ var updateStatus = null;
  */
 
 
+/**
+ * Resolve callback from a Promise when the ngram list is generated
+ * @type {function}
+ * @param {ngramList} ngramList - The ngram list
+ * @returns {void}
+ */
 let generateResolve = null;
+
+let generateReject = null;
 
 /**
  * Worker message handler
@@ -91,6 +101,8 @@ var onWorkerMessage = (e) => {
             ngramList = ngramList.sort((a,b)=>b.count - a.count);
 
             generateResolve && generateResolve(ngramList);
+            generateResolve = null;
+            generateReject = null;
 
             break;
         case 'categories':
@@ -104,13 +116,37 @@ var onWorkerMessage = (e) => {
             ngramList = ngramList.sort((a,b)=>b.count - a.count);
 
             generateResolve && generateResolve(ngramList);
+            generateResolve = null;
+            generateReject = null;
 
+            break;
+        case 'ready':
             break;
         default:
             console.log('Unknown message type', msg.type);
     }
     
 }
+
+let restarting = false;
+async function restartWorker() {
+    if(!restarting) {
+        restarting = true;
+        worker.terminate();
+        worker = new Worker(new URL('./worker.js', import.meta.url));
+    }
+
+    // Wait for the worker to send a ready message
+    await new Promise((resolve, reject)=>{
+        worker.onmessage = (e) => {
+            if(e.data.type == 'ready') {
+                restarting = false;
+                resolve();
+            }
+        }
+    });
+}
+
 
 const ngram = {
 
@@ -131,13 +167,19 @@ const ngram = {
     generateNgramList: async (tc) => {
         textContent = tc || textContent;
 
-        // TODO Restart worker if it's already running and not responding
-
-        return new Promise((resolve, reject)=>{
-            worker.postMessage({responses:textContent, ...settings});
+        return new Promise(async (resolve, reject)=>{
+            // Reject the previous promise
+            if(generateReject) {
+                generateReject('Text content changed');
+                generateReject = reject;
+                generateResolve = null;
+                await restartWorker();
+            }
 
             generateResolve = resolve;
+            generateReject = reject;
             worker.onmessage = onWorkerMessage;
+            worker.postMessage({responses:textContent, ...settings});
         });
     },
 
@@ -150,14 +192,32 @@ const ngram = {
     },
 
     applySettings: async (newSettings) => {
+        // Check if the settings have changed
+        let changed = false;
+        for(let k in newSettings) {
+            if(settings[k] != newSettings[k]) {
+                changed = true;
+                break;
+            }
+        }
+        if(!changed) return null;
+
         settings = {...settings, ...newSettings};
 
         if(textContent) {
-            return new Promise((resolve, reject)=>{
-                worker.postMessage({responses:textContent, ...settings});
+            return new Promise(async (resolve, reject)=>{
+                // Reject the previous promise
+                if(generateReject) {
+                    generateReject('Settings changed');
+                    generateReject = reject;
+                    generateResolve = null;
+                    await restartWorker();
+                } 
     
                 generateResolve = resolve;
+                generateReject = reject;
                 worker.onmessage = onWorkerMessage;           
+                worker.postMessage({responses:textContent, ...settings});
             });
         } else {
             return null;
