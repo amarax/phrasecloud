@@ -203,7 +203,7 @@ function createDataColors() {
 
     function redrawColorsOnly() {
         d3.select('#cloud')
-            .select('g')
+            .select('g.cloud')
             .selectAll('text')
             .attr('fill', color);
     }
@@ -326,11 +326,12 @@ function draw(words, layout) {
 
     // If there are less than 5 unique counts
     let uniqueCounts = new Set(wordsBySizes.map(w=>w.count));
-    switch(uniqueCounts.size) {
+    uniqueCounts = [...uniqueCounts.values()].sort((a,b)=>a-b);
+    switch(uniqueCounts.length) {
         case 1:
         case 2:
         case 3:
-            legendData = [...uniqueCounts.values()].map(c=>{
+            legendData = uniqueCounts.map(c=>{
                 let index = wordsBySizes.findIndex(w=>w.count === c);
                 return {size: wordsBySizes[index].size, count: wordsBySizes[index].count};
             });
@@ -340,7 +341,8 @@ function draw(words, layout) {
             // Deliberately don't break here
         default:
             legendData = percentiles.map(p=>{
-                let index = Math.round((wordsBySizes.length-1) * p/100);
+                let countIndex = Math.round((uniqueCounts.length-1) * p/100);
+                let index = wordsBySizes.findIndex(w=>w.count === uniqueCounts[countIndex]);
                 return {size: wordsBySizes[index].size, count: wordsBySizes[index].count};
             });
             break;
@@ -351,17 +353,41 @@ function draw(words, layout) {
 
     let legend = d3.select('#cloud').select('g.legend');
     legend.selectAll('text')
-        .data(legendData)
-        .join('text')
+        .data(legendData, d=>d.count)
+        .join(
+            enter => {
+                enter.append('text')
             .text(d=>`${d.count} responses`)
             .style("transform", function(d) {
                 return `translate(${10}px, ${layout.size()[1] - d.offset - 10}px)`;
             })
             .attr('text-anchor', 'start')
             .attr('alignment-baseline', 'baseline')
+                    .style('font-family', cloudFont.family)
+                    .style('font-weight', cloudFont.weight)
+                    .style('font-size', d=>d.size + 'px')
+
+                    .style("opacity", 0)
+                    .transition()
+                        .duration(500)
+                        .style("opacity", null)
+            },
+            update => {
+                update
+                    .text(d=>`${d.count} responses`)
+                    .style("transform", function(d) {
+                        return `translate(${10}px, ${layout.size()[1] - d.offset - 10}px)`;
+                    })
             .style('font-size', d=>d.size + 'px')
-            .style('font-family', cloudFont.family)
-            .style('font-weight', cloudFont.weight);
+            },
+            exit => {
+                exit.style("opacity", 1)
+                    .transition()
+                        .duration(300)
+                        .style("opacity", 0)
+                        .remove();
+            }
+        )
 
     dataColors.redrawColorsOnly();
 }
@@ -560,12 +586,12 @@ function displayCloudMessage(message) {
 
     // Replace the cloud with a loading message
     d3.select('#cloud')
-    .select('g')
+    .select('g.cloud')
     .selectAll('text')
     .remove();
 
     d3.select('#cloud')
-    .select('g')
+    .select('g.cloud')
         .attr('transform', null)
     .append('text')
         .classed('loading', true)
@@ -573,6 +599,12 @@ function displayCloudMessage(message) {
         .attr('y', '50%')
         .attr('text-anchor', 'middle')
         .text(message);
+
+    // Remove the legend
+    d3.select('#cloud')
+        .select('g.legend')
+        .selectAll('text')
+        .remove();
 }
 
 

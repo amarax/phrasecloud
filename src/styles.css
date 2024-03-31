@@ -71,7 +71,7 @@ select#columnSelect {
 }
 
 #cloud g.legend text {
-    fill: #0003;
+    fill: #0001;
 
     pointer-events: none;
 
