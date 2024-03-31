@@ -32,7 +32,7 @@ var ngramSelection = {
 
         // Apply the selected class to the text element
         d3.select('#cloud')
-            .select('g')
+            .select('g.cloud')
             .selectAll('text')
             .classed('selected', d=>d?.key === value);
 
