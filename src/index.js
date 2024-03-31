@@ -652,6 +652,29 @@ downloadButton.onclick = function() {
     source = source.replace(widthRegex, widthReplace);
     source = source.replace(heightRegex, heightReplace);
 
+    // If the legend is not shown, remove it from the SVG
+    if(!document.getElementById('showLegend').checked) {
+        const legendRegex = /<g class="legend hidden"([^>]*)>([\s\S]+?)<\/g>/;
+        source = source.replace(legendRegex, '');
+    } else {
+        // Bake the colour of the legend into the text elements
+        // Get the colour of the legend from the CSS and bake it into the SVG
+        const legendRegex = /<g class="legend"([^>]*)>([\s\S]+?)<\/g>/;
+        const legendTextRegex = /<text([^>]*)>([\s\S]+?)<\/text>/g;
+        const legendTextFill = `fill="${getComputedStyle(document.querySelector('#cloud g.legend text')).fill}"`;
+        source = source.replace(
+            legendRegex,
+            (match, g, text)=>{
+                return match.replace(
+                    legendTextRegex,
+                    (match, attrs, text)=>{
+                        return `<text${attrs} ${legendTextFill}>${text}</text>`
+                    }
+                );
+            }
+        );
+    }
+
 
     // Convert all oklch colours to RGB using chroma.js
     const colorRegex = /oklch\(([\s\S]+?)% ([\s\S]+?) ([\s\S]+?)\)/g;
@@ -726,3 +749,9 @@ document.addEventListener('paste', async (e)=>{
     }
 });
 
+
+// Toogle show/hide legend
+document.getElementById('showLegend').onclick = (e) => {
+    let show = e.target.checked;
+    d3.select('#cloud').select('g.legend').classed('hidden', !show);
+}
