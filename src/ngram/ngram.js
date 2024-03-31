@@ -47,7 +47,7 @@ if (module.hot) {
 var settings = {
     minNgramLength: 1,
     include: "",  // Responses must include these words
-    phraseStructure: null,  // Ngrams should match this structure
+    phraseStructure: "",  // Ngrams should match this structure
 }
 var textContent = null;
 

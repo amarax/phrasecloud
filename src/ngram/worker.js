@@ -32,6 +32,9 @@ console.log('Worker started.');
  */
 
 
+const MatchTags = ['<span class="match">', '</span>'];
+
+
 function slice(tokenCollection, start, length) {
     let tokens = [];
     for(let i = start; (i < start + length) && (i < tokenCollection.length()); i++) {
@@ -41,12 +44,141 @@ function slice(tokenCollection, start, length) {
 }
 
 
+function determineCategories(data) {
+    let categories = {};
+    data.forEach(response=>{
+        let c = response.trim().toLowerCase();
+
+        if(!categories[c]) {
+            categories[c] = 0;
+        }
+
+        categories[c]++;
+    });
+
+    return categories;
+}
+
+function ngramsByStructure(dataset, structure, responseInclude) {
+    const patterns = [
+        { name: 'phrase-structure', patterns: [structure] }
+    ]
+    nlp.learnCustomEntities(patterns);
+
+    let responses = dataset
+        .map(r=>nlp.readDoc(r.trim()));
+
+    if(responseInclude) {
+        responses = responses.filter(response=>{
+            let tokens = response.tokens().out();
+            return responseInclude.some(include=>tokens.find(t=>t.toLowerCase().startsWith(include)));
+        });
+    }
+
+    /** @type {Record<string, {responseIndex: number, match: any}>} */
+    let matches = {};
+
+    responses.forEach((response, responseIndex) => {
+        let _matches = response.customEntities();
+        _matches.each(match=>{
+            let key = match.out(its.stem);
+            if(!matches[key]) {
+                matches[key] = [];
+            }
+            matches[key].push({responseIndex, match});
+        });
+    });
+
+    // Remove ngrams that do not repeat
+    Object.entries(matches).forEach(([k,v])=>{
+        if(v.length <= 1) {
+            delete matches[k];
+        }
+    });
+
+    // Markup the matches
+    Object.values(matches).forEach(v=>{
+        v.forEach(({match})=>{
+            match.markup(MatchTags[0],MatchTags[1]);
+        });
+    });
+
+    let commonPhrases = {};
+    Object.entries(matches).forEach(([k,v])=>{
+        let phrases = {};
+        v.forEach(({match})=>{
+            let phrase = match.out();
+            if(!phrases[phrase]) {
+                phrases[phrase] = 0;
+            }
+            phrases[phrase]++;
+        });
+
+        let commonPhrase = Object.entries(phrases).sort((a,b)=>b[1]-a[1])[0][0];
+        commonPhrases[k] = commonPhrase;
+    });
+
+    let ngrams = {};
+    Object.entries(matches).forEach(([k,v])=>{
+        ngrams[k] = {
+            commonPhrase: commonPhrases[k],
+            responses: v.map(({responseIndex, match})=>{
+                let parent = match.parentDocument();
+                let doc = nlp.readDoc(parent.out());
+                let tokens = doc.tokens();
+
+                let span = match.out(its.span);
+
+                let first = tokens.itemAt( span[0] );
+                let last = tokens.itemAt( span[1] );
+
+                if(span[1] == span[0]) {
+                    first.markup(MatchTags[0],MatchTags[1]);
+                } else {
+                    first.markup(MatchTags[0],'');
+                    last.markup('',MatchTags[1]);
+                }
+
+                return {
+                    response: doc.out(),
+                    markup: doc.out(its.markedUpText)
+                }
+            })
+        }
+    });
+
+
+    return ngrams;
+}
+
+
 function generateNgrams(data) {
     // Start performance timer
     console.time(`generateNgrams ${minNgramLength}`);
 
     // Remove repeated responses
     const dataset = [...new Set(data)];
+
+    let isLikelyCategoryColumn = data.length > 10 && dataset.length < 0.2 * data.length;
+    if(isLikelyCategoryColumn) {
+        let categories = determineCategories(data);
+        self.postMessage({type:'update', content:{categories:Object.keys(categories).length}});
+
+        self.postMessage({type:'categories', content:{categories}});
+
+        // End performance timer
+        console.timeEnd(`generateNgrams ${minNgramLength}`);
+        return;
+    }
+
+    if(phraseStructure !== null) {
+        let ngrams = ngramsByStructure(dataset, phraseStructure);
+        self.postMessage({type:'ngrams', content:{ngrams}});
+
+        console.timeEnd(`generateNgrams ${minNgramLength}`);
+        return;
+    }
+
     let responses = dataset.map(r=>nlp.readDoc(r.trim())); // Trim because whitespaces will trip up the tokenizer
 
     // If responseInclude is set, filter out responses that don't include any of the specified stems
@@ -58,27 +190,7 @@ function generateNgrams(data) {
         });
     }
 
-    let isLikelyCategoryColumn = data.length > 10 && dataset.length < 0.2 * data.length;
-    if(isLikelyCategoryColumn) {
-        // Just return the current dataset
-        let categories = {};
-        data.forEach(response=>{
-            let c = response.trim().toLowerCase();
 
-            if(!categories[c]) {
-                categories[c] = 0;
-            }
-
-            categories[c]++;
-        });
-        self.postMessage({type:'update', content:{categories:Object.keys(categories).length}});
-
-        self.postMessage({type:'categories', content:{categories}});
-
-        // End performance timer
-        console.timeEnd(`generateNgrams ${minNgramLength}`);
-        return;
-    }
 
     self.postMessage({type:'update', content:{responses:responses.length}});
 
@@ -211,8 +323,6 @@ function generateNgrams(data) {
     // });
 
 
-    const tags = ['<span class="match">', '</span>'];
-
     // For each ngram, get the original text that's bounded by the first and last token
     Object.entries(ngrams).forEach(([k,v])=>{
         // Create a map of parent documents to duplicated documents
@@ -236,22 +346,22 @@ function generateNgrams(data) {
             let last = tokens.itemAt( entry.ngram[entry.ngram.length - 1].index() );
 
             if(entry.ngram.length == 1) {
-                first.markup(tags[0],tags[1]);
+                first.markup(MatchTags[0],MatchTags[1]);
             } else {
-                first.markup(tags[0],'');
-                last.markup('',tags[1]);
+                first.markup(MatchTags[0],'');
+                last.markup('',MatchTags[1]);
             }
         });
 
         // Find the most common phrase by looking for regex matches in the duplicated documents
         // Build the regex match from the tags
-        let regex = new RegExp(`${tags[0]}(.*?)${tags[1]}`, 'g');
+        let regex = new RegExp(`${MatchTags[0]}(.*?)${MatchTags[1]}`, 'g');
         let phrases = {}
         documentMap.forEach(doc=>{
             let matches = doc.out(its.markedUpText).match(regex);
             if(matches) {
                 matches.forEach(m=>{
-                    let phrase = m.substring(tags[0].length, m.length - tags[1].length);
+                    let phrase = m.substring(MatchTags[0].length, m.length - MatchTags[1].length);
                     if(!phrases[phrase]) {
                         phrases[phrase] = 0;
                     }
@@ -283,6 +393,37 @@ var data = null;
 var minNgramLength = 1;
 var responseInclude = null;
 
+/** @type {string|null} */
+var phraseStructure = null;
+
+
+// https://universaldependencies.org/u/pos/
+const PartsOfSpeechTags = [
+    'ADJ',
+    'ADP',
+    'ADV',
+    'AUX',
+    'CCONJ',
+    'DET',
+    'INTJ',
+    'NOUN',
+    'NUM',
+    'PART',
+    'PRON',
+    'PROPN',
+    'PUNCT',
+    'SCONJ',
+    'SYM',
+    'VERB',
+    'X',
+];
+
+const StructureWildcards = [
+    '*', // Any word
+
+]
+
+
 self.onmessage = (e) => {
     if(e.data.responses) {
         data = e.data.responses;
@@ -298,6 +439,17 @@ self.onmessage = (e) => {
             // responseInclude = nlp.readDoc(e.data.include).tokens().out(its.stem);
             responseInclude = nlp.readDoc(e.data.include).tokens().out();
             responseInclude = responseInclude.map(t=>t.toLowerCase());
+        }
+    }
+    if(e.data.phraseStructure !== undefined) {
+        if(e.data.phraseStructure.trim() == '') {
+            phraseStructure = null;
+        } else {
+            const ANY = `[${PartsOfSpeechTags.join('|')}]`;
+            const ANYOREMPTY = `[|${PartsOfSpeechTags.join('|')}]`;
+            const ANYUpTo3Words = `${ANY} ${ANYOREMPTY} ${ANYOREMPTY}`;
+
+            phraseStructure = e.data.phraseStructure.replace(/\*/g, ANYUpTo3Words);
         }
     }
 

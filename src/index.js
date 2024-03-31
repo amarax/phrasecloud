@@ -819,3 +819,14 @@ document.getElementById('searchInclude').oninput = async (e) => {
         return;
     }
 }
+
+// When phraseStructure changes, request a new ngram list
+document.getElementById('phraseStructure').oninput = async (e) => {
+    try {
+        await ngram.applySettings({ phraseStructure: e.target.value });
+        await layout(ngram.list);
+    } catch(e) {
+        console.log(e);
+        return;
+    }
+}
