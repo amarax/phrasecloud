@@ -328,6 +328,10 @@ function draw(words, layout) {
     let uniqueCounts = new Set(wordsBySizes.map(w=>w.count));
     uniqueCounts = [...uniqueCounts.values()].sort((a,b)=>a-b);
     switch(uniqueCounts.length) {
+        case 0:
+            console.log(words);
+            // Not sure why this would happen, but just in case
+            break;
         case 1:
         case 2:
         case 3:

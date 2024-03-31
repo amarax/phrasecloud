@@ -47,7 +47,16 @@ function generateNgrams(data) {
 
     // Remove repeated responses
     const dataset = [...new Set(data)];
-    const responses = dataset.map(r=>nlp.readDoc(r.trim())); // Trim because whitespaces will trip up the tokenizer
+    let responses = dataset.map(r=>nlp.readDoc(r.trim())); // Trim because whitespaces will trip up the tokenizer
+
+    // If responseInclude is set, filter out responses that don't include any of the specified stems
+    if(responseInclude) {
+        responses = responses.filter(response=>{
+            // let tokens = response.tokens().out(its.stem);
+            let tokens = response.tokens().out();
+            return responseInclude.some(include=>tokens.find(t=>t.toLowerCase().startsWith(include)));
+        });
+    }
 
     let isLikelyCategoryColumn = data.length > 10 && dataset.length < 0.2 * data.length;
     if(isLikelyCategoryColumn) {
@@ -55,6 +64,7 @@ function generateNgrams(data) {
         let categories = {};
         data.forEach(response=>{
             let c = response.trim().toLowerCase();
+
             if(!categories[c]) {
                 categories[c] = 0;
             }
@@ -102,6 +112,16 @@ function generateNgrams(data) {
                 }
             })
         });
+
+        // Remove single ngrams that are inside the responseInclude list
+        if(ngramLength == 1 && responseInclude) {
+            Object.entries(newNgrams).forEach(([k,v])=>{
+                newNgrams[k] = v.filter(({responseIndex, ngram})=>{
+                    let word = ngram[0].out().toLowerCase();
+                    return !responseInclude.includes(word);
+                });
+            });
+        }
 
         // Remove ngrams that do not repeat
         Object.entries(newNgrams).forEach(([k,v])=>{
@@ -261,6 +281,7 @@ function generateNgrams(data) {
 
 var data = null;
 var minNgramLength = 1;
+var responseInclude = null;
 
 self.onmessage = (e) => {
     if(e.data.responses) {
@@ -268,6 +289,16 @@ self.onmessage = (e) => {
     }
     if(e.data.minNgramLength) {
         minNgramLength = e.data.minNgramLength;
+    }
+    if(e.data.include !== undefined) {
+        if(e.data.include.trim() == '') {
+            responseInclude = null;
+        } else {
+            // Parse the include string to get a list of stems to include
+            // responseInclude = nlp.readDoc(e.data.include).tokens().out(its.stem);
+            responseInclude = nlp.readDoc(e.data.include).tokens().out();
+            responseInclude = responseInclude.map(t=>t.toLowerCase());
+        }
     }
 
     if(data) {
