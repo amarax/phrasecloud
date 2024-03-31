@@ -274,7 +274,7 @@ function draw(words, layout) {
     d3.select('#cloud').select('.loading')?.remove();
 
     d3.select("#cloud")
-        .select("g")
+        .select("g.cloud")
             .attr("transform", "translate(" + layout.size()[0] / 2 + "," + layout.size()[1] / 2 + ")")
             .style("font-family", cloudFont.family)
             .style("font-weight", cloudFont.weight)
@@ -318,6 +318,50 @@ function draw(words, layout) {
                 }
             )
 
+    let wordsBySizes = words.map(w=>({size:w.size, count:w.count})).sort((a,b)=>a.count-b.count);
+
+    let percentiles = [25, 50, 75];
+
+    let legendData = [];
+
+    // If there are less than 5 unique counts
+    let uniqueCounts = new Set(wordsBySizes.map(w=>w.count));
+    switch(uniqueCounts.size) {
+        case 1:
+        case 2:
+        case 3:
+            legendData = [...uniqueCounts.values()].map(c=>{
+                let index = wordsBySizes.findIndex(w=>w.count === c);
+                return {size: wordsBySizes[index].size, count: wordsBySizes[index].count};
+            });
+            break;
+        case 4:
+            percentiles = [0, 50, 100];
+            // Deliberately don't break here
+        default:
+            legendData = percentiles.map(p=>{
+                let index = Math.round((wordsBySizes.length-1) * p/100);
+                return {size: wordsBySizes[index].size, count: wordsBySizes[index].count};
+            });
+            break;
+    }
+
+    let offset = 0;
+    legendData.forEach(d=>{d.offset = offset; offset += d.size;})
+
+    let legend = d3.select('#cloud').select('g.legend');
+    legend.selectAll('text')
+        .data(legendData)
+        .join('text')
+            .text(d=>`${d.count} responses`)
+            .style("transform", function(d) {
+                return `translate(${10}px, ${layout.size()[1] - d.offset - 10}px)`;
+            })
+            .attr('text-anchor', 'start')
+            .attr('alignment-baseline', 'baseline')
+            .style('font-size', d=>d.size + 'px')
+            .style('font-family', cloudFont.family)
+            .style('font-weight', cloudFont.weight);
 
     dataColors.redrawColorsOnly();
 }
@@ -606,6 +650,7 @@ downloadButton.onclick = function() {
 
 
 import defaultText from './default.txt';
+import { unique } from 'webpack-merge';
 
 ngram.onStatusUpdate = updateStatus;
 

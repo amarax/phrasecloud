@@ -57,18 +57,25 @@ select#columnSelect {
     /* cursor: grab; */
 }
 
-#cloud text {
+#cloud g.cloud text {
     cursor: pointer;
     transition: font-size 0.5s ease, transform 0.5s ease;
-    -webkit-transition: font-size 0.5s ease, -webkit-transform 0.5s ease;
 }
 
-#cloud text.selected {
+#cloud g.cloud text.selected {
     text-decoration: underline;
 }
 
-#cloud text:hover {
+#cloud g.cloud text:hover {
     fill: #ffcc00;
+}
+
+#cloud g.legend text {
+    fill: #0003;
+
+    pointer-events: none;
+
+    transition: font-size 0.5s ease, transform 0.5s ease;
 }
 
 #dropZone {
